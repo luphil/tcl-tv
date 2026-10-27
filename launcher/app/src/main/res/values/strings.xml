@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_key_service_label">TV Home remote buttons</string>
+    <string name="settings_key_service_description">Gives chosen remote buttons a job (gear button opens Settings, YouTube button opens YouTube). Other buttons are untouched and nothing on screen is read.</string>
+</resources>

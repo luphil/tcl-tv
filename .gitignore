@@ -1,0 +1,18 @@
+# Private: signing key, Aerial Views clone and build tools
+build/
+
+# Device backups (contain the TV's serial number and settings)
+backup-*/
+projectivy/
+
+# Built apps and screenshots
+*.apk
+/*.png
+
+# Build output and machine-specific files
+launcher/.gradle/
+launcher/.kotlin/
+launcher/build/
+launcher/app/build/
+launcher/local.properties
+.DS_Store

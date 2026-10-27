@@ -1,0 +1,27 @@
+# Packages removed for user 0 (pm uninstall -k --user 0). Restore with ./restore.sh
+# --- ads / tracking / marketing ---
+tv.samba.ssm.ui
+com.tcl.ttvs
+com.tcl.interactive
+com.tcl.waterfall.overseas
+com.tcl.channelplus
+com.tcl.partnercustomizer
+com.tcl.messagebox
+com.tcl.logkit
+com.tcl.guard
+com.tcl.usercenter
+com.tcl.esticker
+com.tcl.exhibit
+android.autoinstalls.config.google.gtvpai
+com.google.android.apps.tv.dreamx
+# --- preinstalled sponsor apps ---
+tv.wuaki.apptv
+com.google.android.youtube.tvmusic
+com.google.android.play.games
+com.google.android.videos
+com.tcl.smartalexa
+com.tcl.magiconnectfree
+# --- user apps no longer wanted ---
+com.spotify.tv.android
+com.phlox.tvwebbrowser
+com.tcl.browser

@@ -1,0 +1,46 @@
+# Aerial Views screensaver settings for the living room TV.
+# Edit and re-import with: ~/tcl-tv/screensaver-apply.sh
+
+# --- Photos: only your folder, no streamed Apple/Amazon/other videos ---
+bool_apple_videos_enabled=false
+bool_amazon_videos_enabled=false
+bool_comm1_videos_enabled=false
+bool_comm2_videos_enabled=false
+bool_local_videos_enabled=true
+string_local_videos_search_type=FOLDER_ACCESS
+stringset_local_media_selection=PHOTOS
+string_local_videos_legacy_volume=/storage/emulated/0
+string_local_videos_legacy_volume_label=Internal storage
+string_local_videos_legacy_folder=/Pictures/Wallpapers
+bool_local_videos_legacy_search_subfolders=true
+
+# Seconds per photo; fill the screen (crop edges) rather than letterbox
+string_slideshow_speed=30
+string_photo_scale_landscape=CENTER_CROP
+string_photo_scale_portrait=FIT_CENTER
+
+# --- Overlays: clock with the temperature under it, bottom-left ---
+string_slot_bottom_left1=CLOCK
+string_slot_bottom_left2=WEATHER1
+string_slot_bottom_right1=EMPTY
+string_clock_size=60
+string_clock_weight=300
+
+# --- Weather (Open-Meteo, no account): Barcelona, Celsius ---
+string_weather_location_name=Barcelona, ES
+string_weather_location_custom_name=Barcelona
+string_weather_location_lat=41.3874
+string_weather_location_lon=2.1686
+string_weather_temperature_units=METRIC
+string_weather_forecast=TEMPERATURE,ICON
+string_weather_line1_size=32
+
+# --- Projectivy homescreen wallpaper: same photo folder, shared via the plugin ---
+stringset_projectivy_shared_providers=LOCAL
+bool_projectivy_shuffle_videos=true
+stringset_projectivy_local_media_selection=PHOTOS
+string_projectivy_local_videos_search_type=FOLDER_ACCESS
+string_projectivy_local_videos_legacy_volume=/storage/emulated/0
+string_projectivy_local_videos_legacy_volume_label=Internal storage
+string_projectivy_local_videos_legacy_folder=/Pictures/Wallpapers
+bool_projectivy_local_videos_legacy_search_subfolders=true
