@@ -45,6 +45,9 @@ class WallpaperView(
 
     private val advance = Runnable { showNext() }
 
+    /** Called with each photo as it starts to show (e.g. to judge how bright it is). */
+    var onPhoto: ((Bitmap) -> Unit)? = null
+
     init {
         addView(back)
         addView(front)
@@ -143,6 +146,7 @@ class WallpaperView(
                     if (front.drawable == null) showNext()
                     return@post
                 }
+                onPhoto?.invoke(bitmap)
                 front.setImageBitmap(bitmap)
                 front.tag = bitmap
                 front.alpha = 1f
@@ -182,6 +186,7 @@ class WallpaperView(
     }
 
     private fun crossFadeTo(bitmap: Bitmap) {
+        onPhoto?.invoke(bitmap)
         // The outgoing photo moves to the back layer; the new one fades in on top
         val old = (front.tag as? Bitmap)
         back.setImageBitmap(old)

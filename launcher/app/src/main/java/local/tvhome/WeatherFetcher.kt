@@ -12,7 +12,8 @@ object WeatherFetcher {
 
     data class Reading(
         val temperature: Int,
-        val symbol: String,
+        // Line icon for the conditions, or null for unknown codes
+        val icon: Int?,
         val description: String,
         val high: Int,
         val low: Int,
@@ -40,7 +41,7 @@ object WeatherFetcher {
             val code = current.getInt("weather_code")
             Reading(
                 temperature = current.getDouble("temperature_2m").roundToInt(),
-                symbol = symbolFor(code, current.optInt("is_day", 1) == 1),
+                icon = iconFor(code, current.optInt("is_day", 1) == 1),
                 description = describe(code),
                 high = today.getJSONArray("temperature_2m_max").getDouble(0).roundToInt(),
                 low = today.getJSONArray("temperature_2m_min").getDouble(0).roundToInt(),
@@ -51,19 +52,20 @@ object WeatherFetcher {
         }
 
     // WMO weather codes: https://open-meteo.com/en/docs
-    private fun symbolFor(
+    private fun iconFor(
         code: Int,
         isDay: Boolean,
-    ): String =
+    ): Int? =
         when (code) {
-            0 -> if (isDay) "☀️" else "🌙"
-            1, 2 -> if (isDay) "🌤️" else "☁️"
-            3 -> "☁️"
-            45, 48 -> "🌫️"
-            in 51..67, in 80..82 -> "🌧️"
-            in 71..77, 85, 86 -> "❄️"
-            in 95..99 -> "⛈️"
-            else -> ""
+            0 -> if (isDay) R.drawable.wx_clear_day else R.drawable.wx_clear_night
+            1, 2 -> if (isDay) R.drawable.wx_partly_day else R.drawable.wx_partly_night
+            3 -> R.drawable.wx_cloudy
+            45, 48 -> R.drawable.wx_fog
+            in 51..57 -> R.drawable.wx_drizzle
+            in 61..67, in 80..82 -> R.drawable.wx_rain
+            in 71..77, 85, 86 -> R.drawable.wx_snow
+            in 95..99 -> R.drawable.wx_storm
+            else -> null
         }
 
     private fun describe(code: Int): String =

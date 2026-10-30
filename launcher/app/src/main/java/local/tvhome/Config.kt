@@ -14,6 +14,12 @@ data class Config(
     val wallpaperZoom: Boolean = true,
     val clock: Boolean = true,
     val clockFormat: String = "HH:mm",
+    // Shown under the clock; blank hides it
+    val dateFormat: String = "EEE d MMM",
+    // Seconds without a button press before the row fades away, leaving photo, clock and weather; 0 = never
+    val ambientSeconds: Int = 20,
+    // Corner for the small settings button ("bottom-left", ...), or "none"
+    val settingsPosition: String = "bottom-left",
     // Path to a .ttf/.otf on the TV (e.g. /sdcard/TVHome/fonts/Inter.ttf); null = system font
     val font: String? = null,
     // "top" or "bottom"
@@ -157,6 +163,12 @@ data class Config(
                 wallpaperZoom = wallpaper.optBoolean("zoom", defaults.wallpaperZoom),
                 clock = clock.optBoolean("enabled", defaults.clock),
                 clockFormat = clock.optString("format", defaults.clockFormat),
+                dateFormat = clock.optString("dateFormat", defaults.dateFormat),
+                ambientSeconds =
+                    json.optJSONObject("ambient")?.let {
+                        if (it.optBoolean("enabled", true)) it.optInt("seconds", defaults.ambientSeconds).coerceAtLeast(0) else 0
+                    } ?: defaults.ambientSeconds,
+                settingsPosition = layout.optString("settings", defaults.settingsPosition),
                 font = json.optString("font").ifBlank { null },
                 rowPosition = layout.optString("row", defaults.rowPosition),
                 clockPosition = layout.optString("clock", defaults.clockPosition),

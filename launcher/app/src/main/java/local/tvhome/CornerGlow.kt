@@ -8,7 +8,10 @@ import android.graphics.RadialGradient
 import android.graphics.Shader
 import android.view.View
 
-/** A dark glow fading out from one corner, so text there stays readable over any photo. */
+/**
+ * A dark glow fading out from one corner, so text there stays readable over any photo.
+ * Its alpha is set per photo: strong over bright corners, light over dark ones.
+ */
 class CornerGlow(
     context: Context,
     private val right: Boolean,
@@ -28,8 +31,8 @@ class CornerGlow(
                 if (right) w.toFloat() else 0f,
                 if (bottom) h.toFloat() else 0f,
                 minOf(w, h) * 0.95f,
-                intArrayOf(Color.argb(150, 0, 0, 0), Color.argb(70, 0, 0, 0), Color.TRANSPARENT),
-                floatArrayOf(0f, 0.5f, 1f),
+                intArrayOf(Color.argb(200, 0, 0, 0), Color.argb(110, 0, 0, 0), Color.argb(35, 0, 0, 0), Color.TRANSPARENT),
+                floatArrayOf(0f, 0.4f, 0.75f, 1f),
                 Shader.TileMode.CLAMP,
             )
     }

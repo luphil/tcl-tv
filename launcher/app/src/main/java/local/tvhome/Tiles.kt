@@ -71,7 +71,7 @@ class Tiles(
         return tile
     }
 
-    /** An HDMI input: the device's logo beside its name, on its brand colours. */
+    /** An HDMI input: the device's logo (or its name) over the input's name, on its brand colours. */
     fun inputTile(
         title: String,
         subtitle: String?,
@@ -93,28 +93,20 @@ class Tiles(
                 GradientDrawable(GradientDrawable.Orientation.TL_BR, (if (colors.size == 1) colors + colors else colors).toIntArray())
                     .apply { cornerRadius = dp(10).toFloat() }
             }
-        val content =
-            LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER
-            }
-        if (logoRes != null) {
-            content.addView(
-                ImageView(context).apply { setImageResource(logoRes) },
-                LinearLayout.LayoutParams(dp(28), dp(28)).apply { marginEnd = dp(10) },
-            )
-        }
         val column =
             LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
-                gravity = Gravity.START
+                gravity = Gravity.CENTER
             }
-        column.addView(text(title, 18f, Color.WHITE).apply { gravity = Gravity.START })
-        if (subtitle != null) {
-            column.addView(text(subtitle, 10f, Color.argb(190, 255, 255, 255)).apply { gravity = Gravity.START })
+        if (logoRes != null) {
+            column.addView(ImageView(context).apply { setImageResource(logoRes) }, LinearLayout.LayoutParams(dp(30), dp(30)))
+        } else {
+            column.addView(text(title, 20f, Color.WHITE))
         }
-        content.addView(column)
-        tile.addView(content, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        if (subtitle != null) {
+            column.addView(text(subtitle, 10f, Color.argb(200, 255, 255, 255)).apply { setPadding(0, dp(4), 0, 0) })
+        }
+        tile.addView(column, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         return tile
     }
 
@@ -169,18 +161,34 @@ class Tiles(
                         outline: Outline,
                     ) = outline.setRoundRect(0, 0, view.width, view.height, dp(10).toFloat())
                 }
-            // White ring when focused, nothing otherwise
+            // Every tile shares one look whatever its banner: a faint edge and a soft shadow,
+            // slightly dimmed until focused, when it brightens, lifts and gets a white ring
+            elevation = dp(4).toFloat()
             foreground =
                 GradientDrawable().apply {
                     cornerRadius = dp(10).toFloat()
-                    setStroke(dp(3), Color.TRANSPARENT)
+                    styleRing(this, focused = false)
                 }
             setOnFocusChangeListener { view, focused ->
-                ((view as FrameLayout).foreground as GradientDrawable).setStroke(dp(3), if (focused) Color.WHITE else Color.TRANSPARENT)
+                styleRing((view as FrameLayout).foreground as GradientDrawable, focused)
                 val scale = if (focused) 1.12f else 1f
-                view.animate().scaleX(scale).scaleY(scale).setDuration(150).start()
+                view
+                    .animate()
+                    .scaleX(scale)
+                    .scaleY(scale)
+                    .translationZ(if (focused) dp(8).toFloat() else 0f)
+                    .setDuration(150)
+                    .start()
             }
         }
+
+    private fun styleRing(
+        ring: GradientDrawable,
+        focused: Boolean,
+    ) {
+        ring.setColor(if (focused) Color.TRANSPARENT else Color.argb(46, 0, 0, 0))
+        if (focused) ring.setStroke(dp(3), Color.WHITE) else ring.setStroke(dp(1), Color.argb(46, 255, 255, 255))
+    }
 
     private fun cardBackground() =
         GradientDrawable().apply {
