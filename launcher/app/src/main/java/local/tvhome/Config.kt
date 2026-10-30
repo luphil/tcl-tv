@@ -12,6 +12,8 @@ data class Config(
     val wallpaperSeconds: Int = 45,
     val wallpaperShuffle: Boolean = true,
     val wallpaperZoom: Boolean = true,
+    // Number buttons typed quickly on the homescreen to skip to the next photo; blank = off
+    val wallpaperNextCode: String = "666",
     val clock: Boolean = true,
     val clockFormat: String = "HH:mm",
     // Shown under the clock; blank hides it
@@ -164,6 +166,7 @@ data class Config(
                 wallpaperSeconds = wallpaper.optInt("seconds", defaults.wallpaperSeconds).coerceAtLeast(5),
                 wallpaperShuffle = wallpaper.optBoolean("shuffle", defaults.wallpaperShuffle),
                 wallpaperZoom = wallpaper.optBoolean("zoom", defaults.wallpaperZoom),
+                wallpaperNextCode = wallpaper.optString("nextCode", defaults.wallpaperNextCode).filter { it.isDigit() },
                 clock = clock.optBoolean("enabled", defaults.clock),
                 clockFormat = clock.optString("format", defaults.clockFormat),
                 dateFormat = clock.optString("dateFormat", defaults.dateFormat),

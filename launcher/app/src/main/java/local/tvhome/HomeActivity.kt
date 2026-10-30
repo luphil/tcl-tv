@@ -14,6 +14,7 @@ import android.media.tv.TvContract
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.Settings
 import android.util.Log
 import android.util.TypedValue
@@ -43,6 +44,10 @@ class HomeActivity : Activity() {
     private val chrome = mutableListOf<View>()
     private var ambient = false
     private var swallowKeyUp = -1
+
+    // Digits typed so far towards the skip-photo code, and when the last one came
+    private val typed = StringBuilder()
+    private var lastDigitAt = 0L
     private val cornerButtons = mutableListOf<View>()
     private val cells = mutableListOf<FrameLayout>()
     private var statusView: ViewGroup? = null
@@ -496,6 +501,12 @@ class HomeActivity : Activity() {
     // and only the photo, clock and weather stay. Any button brings them back
     // (that press only wakes the screen; it doesn't also act on the focused tile).
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Number buttons only ever type the skip-photo code: they neither wake the tiles
+        // nor restart the idle timer, so photos can be skipped while the tiles are hidden
+        if (event.keyCode in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 && config.wallpaperNextCode.isNotEmpty()) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) typeDigit('0' + (event.keyCode - KeyEvent.KEYCODE_0))
+            return true
+        }
         if (ambient) {
             if (event.action == KeyEvent.ACTION_DOWN) {
                 setAmbient(false)
@@ -509,6 +520,17 @@ class HomeActivity : Activity() {
         }
         restartIdleTimer()
         return super.dispatchKeyEvent(event)
+    }
+
+    private fun typeDigit(digit: Char) {
+        val now = SystemClock.uptimeMillis()
+        if (now - lastDigitAt > CODE_GAP_MS) typed.clear()
+        lastDigitAt = now
+        typed.append(digit)
+        if (typed.endsWith(config.wallpaperNextCode)) {
+            typed.clear()
+            wallpaper.next()
+        }
     }
 
     private fun restartIdleTimer() {
@@ -649,5 +671,8 @@ class HomeActivity : Activity() {
         private const val BUTTON_GROW_ROOM_DP = 4
         private const val AMBIENT_FADE_OUT_MS = 1200L
         private const val AMBIENT_FADE_IN_MS = 250L
+
+        // Longest pause between the skip-photo code's digits
+        private const val CODE_GAP_MS = 1500L
     }
 }

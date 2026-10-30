@@ -40,6 +40,8 @@ class WallpaperView(
     private var seconds = 45
     private var zoom = true
     private var running = false
+    // A photo is being decoded; skips wait until it's shown
+    private var loading = false
     // The photo on screen (for the boot photo: the folder photo it was made from)
     private var current: File? = null
     private val bootPhoto = File(context.filesDir, "boot-photo.jpg")
@@ -108,6 +110,13 @@ class WallpaperView(
         front.animate().cancel()
     }
 
+    /** Move on to the next photo now (the timer restarts from it). */
+    fun next() {
+        if (!running || loading) return
+        handler.removeCallbacks(advance)
+        showNext()
+    }
+
     private fun scheduleNext() {
         handler.removeCallbacks(advance)
         if (running && photos.size > 1) handler.postDelayed(advance, seconds * 1000L)
@@ -126,9 +135,11 @@ class WallpaperView(
         val file = photos[index]
         val width = resources.displayMetrics.widthPixels
         val height = resources.displayMetrics.heightPixels
+        loading = true
         decoder.execute {
             val bitmap = decode(file, width, height)
             handler.post {
+                loading = false
                 if (bitmap == null) {
                     scheduleNext()
                 } else if (!running && front.drawable != null) {

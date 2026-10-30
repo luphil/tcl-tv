@@ -3,7 +3,8 @@
     "folder": "/sdcard/Pictures/Wallpapers",
     "seconds": 45,
     "shuffle": true,
-    "zoom": true
+    "zoom": true,
+    "nextCode": "666"
   },
   "layout": { "row": "bottom", "clock": "bottom-right", "buttons": "top-right" },
   "ambient": { "enabled": true, "seconds": 120 },
