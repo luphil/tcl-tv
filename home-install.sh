@@ -9,6 +9,8 @@ cp launcher/app/build/outputs/apk/release/app-release.apk tv-home.apk
 adb install -r tv-home.apk | tail -1
 
 adb shell appops set local.tvhome MANAGE_EXTERNAL_STORAGE allow
+# TCL's boot manager blocks the remote-button service at start-up unless the app may auto-start
+adb shell appops set local.tvhome APP_AUTO_START allow
 adb shell cmd package set-home-activity --user 0 local.tvhome/.HomeActivity >/dev/null
 # Reinstalling unbinds the remote-button service; toggle it to rebind, with pauses so
 # Android has finished processing the update first (instant toggles get ignored)

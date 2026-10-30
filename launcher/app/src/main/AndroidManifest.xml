@@ -2,6 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Keep the boot photo as the system wallpaper (shown while the TV starts) -->
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
+    <uses-permission android:name="android.permission.SET_WALLPAPER_HINTS" />
+
     <!-- Weather only (Open-Meteo, no account) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Read config + photos from /sdcard (all-files access is granted over adb) -->

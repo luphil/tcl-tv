@@ -33,6 +33,7 @@ class HomeActivity : Activity() {
     private lateinit var row: LinearLayout
     private lateinit var clock: TextClock
     private lateinit var weatherText: TextView
+    private lateinit var weatherDetail: TextView
 
     private var config = Config()
     private var configStamp = -1L
@@ -43,6 +44,10 @@ class HomeActivity : Activity() {
     private val background = Executors.newSingleThreadExecutor()
     private val weatherTick = Runnable { refreshWeather(force = true) }
 
+    // Straight after boot /sdcard can be unreadable for a while; until the real config is
+    // readable the screen shows defaults, so keep checking and rebuild once it appears
+    private val configRetry = Runnable { reloadConfigIfChanged() }
+
     private val packageReceiver =
         object : BroadcastReceiver() {
             override fun onReceive(
@@ -50,6 +55,17 @@ class HomeActivity : Activity() {
                 intent: Intent,
             ) {
                 appsChanged = true
+            }
+        }
+
+    // The TV turning off is when to keep the photo on screen for the next start-up
+    private val screenOffReceiver =
+        object : BroadcastReceiver() {
+            override fun onReceive(
+                context: Context,
+                intent: Intent,
+            ) {
+                if (::wallpaper.isInitialized) wallpaper.saveBootPhoto()
             }
         }
 
@@ -66,30 +82,44 @@ class HomeActivity : Activity() {
                 addDataScheme("package")
             },
         )
+        registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
     }
 
     override fun onResume() {
         super.onResume()
-        // Re-read the config whenever it has been pushed again from the Mac
+        reloadConfigIfChanged()
+        wallpaper.start()
+        refreshWeather(force = false)
+    }
+
+    // Re-read the config whenever it has been pushed again from the Mac
+    private fun reloadConfigIfChanged() {
+        handler.removeCallbacks(configRetry)
         val stamp = Config.lastModified()
         if (stamp != configStamp || appsChanged) {
             configStamp = stamp
             appsChanged = false
             config = Config.load()
+            val wasRunning = ::wallpaper.isInitialized
             buildScreen()
+            if (wasRunning) {
+                wallpaper.start()
+                refreshWeather(force = true)
+            }
         }
-        wallpaper.start()
-        refreshWeather(force = false)
+        if (!Config.readable()) handler.postDelayed(configRetry, CONFIG_RETRY_MS)
     }
 
     override fun onPause() {
         super.onPause()
         wallpaper.stop()
         handler.removeCallbacks(weatherTick)
+        handler.removeCallbacks(configRetry)
     }
 
     override fun onDestroy() {
         unregisterReceiver(packageReceiver)
+        unregisterReceiver(screenOffReceiver)
         super.onDestroy()
     }
 
@@ -136,13 +166,22 @@ class HomeActivity : Activity() {
             FrameLayout.LayoutParams(tiles.dp(400), tiles.dp(400), clockGravity),
         )
 
-        // Weather then clock, in the configured corner
+        // Weather (now, with today's high and low underneath) then clock, in the configured corner
         val status =
             LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
             }
-        weatherText = tiles.text("", 22f, Color.WHITE).apply { setPadding(0, 0, tiles.dp(18), 0) }
+        val weatherColumn =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = if (clockOnRight) Gravity.END else Gravity.START
+                setPadding(0, 0, tiles.dp(18), 0)
+            }
+        weatherText = tiles.text("", 22f, Color.WHITE)
+        weatherDetail = tiles.text("", 12f, Color.argb(210, 255, 255, 255))
+        weatherColumn.addView(weatherText)
+        weatherColumn.addView(weatherDetail)
         clock =
             TextClock(this).apply {
                 format24Hour = config.clockFormat
@@ -152,7 +191,7 @@ class HomeActivity : Activity() {
                 setTextColor(Color.WHITE)
                 setShadowLayer(10f, 0f, 2f, Color.argb(160, 0, 0, 0))
             }
-        if (config.weather != null) status.addView(weatherText)
+        if (config.weather != null) status.addView(weatherColumn)
         if (config.clock) status.addView(clock)
         root.addView(
             status,
@@ -203,7 +242,7 @@ class HomeActivity : Activity() {
                 }
 
                 is Config.Item.Input -> {
-                    tiles.textTile(item.label ?: "Input", item.subtitle) to {
+                    tiles.inputTile(item.label ?: "Input", item.subtitle, item.logo, item.colors) to {
                         launch(Intent(Intent.ACTION_VIEW, TvContract.buildChannelUriForPassthroughInput(item.inputId)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     }
                 }
@@ -219,7 +258,7 @@ class HomeActivity : Activity() {
         tile.setOnClickListener { action() }
         row.addView(
             tile,
-            LinearLayout.LayoutParams(tiles.dp(Tiles.WIDTH_DP), tiles.dp(Tiles.HEIGHT_DP)).apply { marginEnd = tiles.dp(18) },
+            LinearLayout.LayoutParams(tiles.dp(Tiles.WIDTH_DP), tiles.dp(Tiles.HEIGHT_DP)).apply { marginEnd = tiles.dp(16) },
         )
     }
 
@@ -242,6 +281,7 @@ class HomeActivity : Activity() {
             handler.post {
                 lastWeather = System.currentTimeMillis()
                 weatherText.text = "${reading.temperature}° ${reading.symbol}".trim()
+                weatherDetail.text = listOf(reading.description, "H ${reading.high}°  L ${reading.low}°").filter { it.isNotEmpty() }.joinToString("  ·  ")
             }
         }
     }
@@ -259,6 +299,7 @@ class HomeActivity : Activity() {
     companion object {
         private const val TAG = "TVHome"
         private const val WEATHER_INTERVAL_MS = 30 * 60 * 1000L
+        private const val CONFIG_RETRY_MS = 3000L
 
         // Gap between the screen edge and the row's frame, and the fade inside it
         private const val ROW_MARGIN_DP = 24

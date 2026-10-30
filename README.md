@@ -21,10 +21,11 @@ Everything is controlled from a Mac over Wi-Fi with `adb`.
 | Script | Does |
 |---|---|
 | `debloat.sh` | Removes everything in `removed-packages.txt`. |
-| `restore.sh` | Puts every removed app back, and re-enables Google's homescreen. |
+| `restore.sh` | Puts every removed app back, re-enables Google's homescreen, and turns the microphones back on. |
 | `home-install.sh` | Builds and installs TV Home, then grants its permissions. |
 | `home-apply.sh` | Pushes `home/config.json`, fonts and the photos in `~/Desktop/TV wallpapers`. The homescreen reloads by itself. |
 | `screensaver-apply.sh` | Pushes photos and screensaver settings to Aerial Views. |
+| `mic-off.sh` | Turns the microphones off (Android's system-wide mic block, Google Assistant disabled). `./mic-off.sh undo` turns them back on. |
 | `tvkey.sh` | Virtual remote, including real long-presses (`./tvkey.sh hold:enter`). |
 
 ## Doing this to your own TV

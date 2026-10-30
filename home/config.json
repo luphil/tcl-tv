@@ -8,7 +8,8 @@
   "layout": { "row": "top", "clock": "bottom-right" },
   "remoteButtons": {
     "83": "settings",
-    "4065": "com.google.android.youtube.tv"
+    "4065": "com.google.android.youtube.tv",
+    "4099": "com.amazon.amazonvideo.livingroom"
   },
   "clock": { "enabled": true, "format": "HH:mm" },
   "weather": { "enabled": true, "latitude": 41.3874, "longitude": 2.1686, "unit": "C" },
@@ -16,8 +17,8 @@
   "fontWeight": 400,
   "clockWeight": 300,
   "items": [
-    { "type": "input", "label": "Mac", "subtitle": "HDMI 1", "input": "com.tcl.tvinput/.TvPassThroughService/HW15" },
-    { "type": "input", "label": "PS5", "subtitle": "HDMI 2", "input": "com.tcl.tvinput/.TvPassThroughService/HW16" },
+    { "type": "input", "label": "Mac", "subtitle": "HDMI 1", "input": "com.tcl.tvinput/.TvPassThroughService/HW15", "logo": "apple", "colors": ["#2c2c2e", "#8e8e93"] },
+    { "type": "input", "label": "PS5", "subtitle": "HDMI 2", "input": "com.tcl.tvinput/.TvPassThroughService/HW16", "logo": "playstation", "colors": ["#00246b", "#0070d1"] },
     { "type": "app", "package": "com.google.android.youtube.tv" },
     { "type": "app", "package": "com.stremio.one" },
     { "type": "app", "package": "com.wireguard.android" },

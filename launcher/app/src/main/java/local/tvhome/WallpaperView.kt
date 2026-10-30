@@ -1,8 +1,12 @@
 package local.tvhome
 
+import android.app.WallpaperManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Matrix
+import android.graphics.Paint
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -15,6 +19,11 @@ import java.util.concurrent.Executors
 /**
  * Full-screen slideshow of the photos in a folder: each photo slowly zooms
  * ("Ken Burns") and cross-fades into the next. Only runs while home is visible.
+ *
+ * The photo on screen is also kept as the "boot photo": a screen-sized copy in the
+ * app's private storage that is also set as the Android system wallpaper. The TV
+ * shows the system wallpaper while it boots, and the slideshow opens on that same
+ * photo, so starting up goes straight from the boot photo into the slideshow.
  */
 class WallpaperView(
     context: Context,
@@ -31,6 +40,8 @@ class WallpaperView(
     private var seconds = 45
     private var zoom = true
     private var running = false
+    private var current: File? = null
+    private val bootPhoto = File(context.filesDir, "boot-photo.jpg")
 
     private val advance = Runnable { showNext() }
 
@@ -72,7 +83,11 @@ class WallpaperView(
         running = true
         rescan()
         // Keep showing the current photo on return; only load one if nothing is up yet
-        if (front.drawable == null) showNext() else scheduleNext()
+        when {
+            front.drawable != null -> scheduleNext()
+            bootPhoto.exists() -> showBootPhoto()
+            else -> showNext()
+        }
     }
 
     fun stop() {
@@ -89,7 +104,12 @@ class WallpaperView(
     private fun showNext() {
         // Pick up added/removed photos at the end of each cycle
         if (index + 1 >= photos.size) rescan()
-        if (photos.isEmpty()) return
+        if (photos.isEmpty()) {
+            // Straight after boot the photo folder can be unreadable for a while: keep looking
+            handler.removeCallbacks(advance)
+            if (running) handler.postDelayed(advance, RETRY_MS)
+            return
+        }
         index = (index + 1) % photos.size
         val file = photos[index]
         val width = resources.displayMetrics.widthPixels
@@ -102,8 +122,61 @@ class WallpaperView(
                 } else if (!running && front.drawable != null) {
                     bitmap.recycle()
                 } else {
+                    current = file
                     crossFadeTo(bitmap)
+                    // First run: make a boot photo now rather than waiting for the TV to turn off
+                    if (!bootPhoto.exists()) saveBootPhoto()
                 }
+            }
+        }
+    }
+
+    /** Open on the boot photo, already fully shown, exactly as the system wallpaper had it. */
+    private fun showBootPhoto() {
+        val width = resources.displayMetrics.widthPixels
+        val height = resources.displayMetrics.heightPixels
+        decoder.execute {
+            val bitmap = decode(bootPhoto, width, height)
+            handler.post {
+                if (bitmap == null || front.drawable != null) {
+                    bitmap?.recycle()
+                    if (front.drawable == null) showNext()
+                    return@post
+                }
+                front.setImageBitmap(bitmap)
+                front.tag = bitmap
+                front.alpha = 1f
+                if (zoom) startZoom()
+                scheduleNext()
+            }
+        }
+    }
+
+    /**
+     * Keep the photo on screen as the boot photo (private copy + system wallpaper).
+     * Called when the TV turns off, so it's what shows next time the TV starts.
+     */
+    fun saveBootPhoto() {
+        val file = current ?: return
+        val width = resources.displayMetrics.widthPixels
+        val height = resources.displayMetrics.heightPixels
+        decoder.execute {
+            val photo = decode(file, width, height) ?: return@execute
+            val screen = cropToScreen(photo, width, height)
+            photo.recycle()
+            try {
+                val temp = File(bootPhoto.path + ".tmp")
+                temp.outputStream().use { screen.compress(Bitmap.CompressFormat.JPEG, 92, it) }
+                temp.renameTo(bootPhoto)
+                WallpaperManager.getInstance(context).apply {
+                    suggestDesiredDimensions(width, height)
+                    setBitmap(screen)
+                }
+                Log.i(TAG, "Boot photo: ${file.name}")
+            } catch (ex: Exception) {
+                Log.e(TAG, "Could not save boot photo", ex)
+            } finally {
+                screen.recycle()
             }
         }
     }
@@ -131,17 +204,19 @@ class WallpaperView(
                 back.setImageDrawable(null)
                 old?.recycle()
                 back.tag = null
-                if (zoom) {
-                    front
-                        .animate()
-                        .scaleX(ZOOM)
-                        .scaleY(ZOOM)
-                        .setDuration(seconds * 1000L)
-                        .setInterpolator(LinearInterpolator())
-                        .start()
-                }
+                if (zoom) startZoom()
             }.start()
         scheduleNext()
+    }
+
+    private fun startZoom() {
+        front
+            .animate()
+            .scaleX(ZOOM)
+            .scaleY(ZOOM)
+            .setDuration(seconds * 1000L)
+            .setInterpolator(LinearInterpolator())
+            .start()
     }
 
     private fun newImageView() =
@@ -153,6 +228,7 @@ class WallpaperView(
     companion object {
         private const val TAG = "TVHome"
         private const val FADE_MS = 1500L
+        private const val RETRY_MS = 3000L
         private const val ZOOM = 1.08f
         private val PHOTO_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp", "heic", "avif")
 
@@ -171,6 +247,26 @@ class WallpaperView(
             } catch (ex: Exception) {
                 Log.e(TAG, "Could not decode $file", ex)
                 null
+            } catch (ex: OutOfMemoryError) {
+                Log.e(TAG, "Not enough memory to decode $file", ex)
+                null
             }
+
+        // Exactly screen-sized, cropped from the middle like the slideshow's CENTER_CROP
+        private fun cropToScreen(
+            photo: Bitmap,
+            width: Int,
+            height: Int,
+        ): Bitmap {
+            val scale = maxOf(width.toFloat() / photo.width, height.toFloat() / photo.height)
+            val matrix =
+                Matrix().apply {
+                    setScale(scale, scale)
+                    postTranslate((width - photo.width * scale) / 2f, (height - photo.height * scale) / 2f)
+                }
+            return Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also {
+                Canvas(it).drawBitmap(photo, matrix, Paint(Paint.FILTER_BITMAP_FLAG))
+            }
+        }
     }
 }

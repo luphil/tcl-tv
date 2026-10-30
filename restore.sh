@@ -12,4 +12,5 @@ done
 if [ ${#@} -eq 0 ]; then
   adb shell pm enable --user 0 com.google.android.apps.tv.launcherx
   adb shell pm enable --user 0 com.google.android.tungsten.setupwraith
+  ./mic-off.sh undo
 fi

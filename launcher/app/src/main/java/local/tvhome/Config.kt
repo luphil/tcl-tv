@@ -1,5 +1,6 @@
 package local.tvhome
 
+import android.graphics.Color
 import android.graphics.Typeface
 import android.util.Log
 import org.json.JSONObject
@@ -61,6 +62,9 @@ data class Config(
             val inputId: String,
             override val label: String?,
             val subtitle: String?,
+            // Built-in logo ("apple" or "playstation") and background colours (one, or a gradient)
+            val logo: String?,
+            val colors: List<Int>,
         ) : Item()
 
         data class AllApps(
@@ -81,6 +85,8 @@ data class Config(
 
         fun lastModified(): Long = File(PATH).lastModified()
 
+        fun readable(): Boolean = File(PATH).canRead()
+
         fun load(): Config {
             val file = File(PATH)
             if (!file.canRead()) {
@@ -92,6 +98,21 @@ data class Config(
             } catch (ex: Exception) {
                 Log.e(TAG, "Bad config, using defaults", ex)
                 Config(items = listOf(Item.AllApps(null), Item.Settings(null)))
+            }
+        }
+
+        // "colors": ["#1c1c1e", "#636366"] or "color": "#003791"; bad values are skipped
+        private fun colors(item: JSONObject): List<Int> {
+            val values =
+                item.optJSONArray("colors")?.let { list -> (0 until list.length()).map { list.optString(it) } }
+                    ?: listOfNotNull(item.optString("color").ifBlank { null })
+            return values.mapNotNull {
+                try {
+                    Color.parseColor(it)
+                } catch (ex: IllegalArgumentException) {
+                    Log.w(TAG, "Bad colour $it")
+                    null
+                }
             }
         }
 
@@ -115,7 +136,14 @@ data class Config(
                     val label = item.optString("label").ifBlank { null }
                     when (item.optString("type")) {
                         "app" -> Item.App(item.getString("package"), label)
-                        "input" -> Item.Input(item.getString("input"), label, item.optString("subtitle").ifBlank { null })
+                        "input" ->
+                            Item.Input(
+                                item.getString("input"),
+                                label,
+                                item.optString("subtitle").ifBlank { null },
+                                item.optString("logo").ifBlank { null },
+                                colors(item),
+                            )
                         "allApps" -> Item.AllApps(label)
                         "settings" -> Item.Settings(label)
                         else -> null

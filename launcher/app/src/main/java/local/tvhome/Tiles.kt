@@ -63,15 +63,62 @@ class Tiles(
                 }
             column.addView(
                 ImageView(context).apply { setImageDrawable(pm.getApplicationIcon(packageName)) },
-                LinearLayout.LayoutParams(dp(44), dp(44)),
+                LinearLayout.LayoutParams(dp(40), dp(40)),
             )
-            column.addView(text(appLabel(packageName), 12f, Color.WHITE).apply { setPadding(0, dp(6), 0, 0) })
+            column.addView(text(appLabel(packageName), 11f, Color.WHITE).apply { setPadding(0, dp(6), 0, 0) })
             tile.addView(column, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         }
         return tile
     }
 
-    /** A text-only tile, used for HDMI inputs, settings and all apps. */
+    /** An HDMI input: the device's logo beside its name, on its brand colours. */
+    fun inputTile(
+        title: String,
+        subtitle: String?,
+        logo: String?,
+        colors: List<Int>,
+    ): FrameLayout {
+        val logoRes =
+            when (logo) {
+                "apple" -> R.drawable.logo_apple
+                "playstation" -> R.drawable.logo_playstation
+                else -> null
+            }
+        if (logoRes == null && colors.isEmpty()) return textTile(title, subtitle)
+        val tile = baseTile()
+        tile.background =
+            if (colors.isEmpty()) {
+                cardBackground()
+            } else {
+                GradientDrawable(GradientDrawable.Orientation.TL_BR, (if (colors.size == 1) colors + colors else colors).toIntArray())
+                    .apply { cornerRadius = dp(10).toFloat() }
+            }
+        val content =
+            LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+            }
+        if (logoRes != null) {
+            content.addView(
+                ImageView(context).apply { setImageResource(logoRes) },
+                LinearLayout.LayoutParams(dp(28), dp(28)).apply { marginEnd = dp(10) },
+            )
+        }
+        val column =
+            LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.START
+            }
+        column.addView(text(title, 18f, Color.WHITE).apply { gravity = Gravity.START })
+        if (subtitle != null) {
+            column.addView(text(subtitle, 10f, Color.argb(190, 255, 255, 255)).apply { gravity = Gravity.START })
+        }
+        content.addView(column)
+        tile.addView(content, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        return tile
+    }
+
+    /** A text-only tile, used for settings, all apps and inputs without a logo or colours. */
     fun textTile(
         title: String,
         subtitle: String?,
@@ -83,8 +130,8 @@ class Tiles(
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
             }
-        column.addView(text(title, 22f, Color.WHITE))
-        if (subtitle != null) column.addView(text(subtitle, 11f, Color.argb(170, 255, 255, 255)))
+        column.addView(text(title, 20f, Color.WHITE))
+        if (subtitle != null) column.addView(text(subtitle, 10f, Color.argb(170, 255, 255, 255)))
         tile.addView(column, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         return tile
     }
@@ -142,7 +189,7 @@ class Tiles(
         }
 
     companion object {
-        const val WIDTH_DP = 148
-        const val HEIGHT_DP = 83
+        const val WIDTH_DP = 132
+        const val HEIGHT_DP = 74
     }
 }
