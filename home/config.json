@@ -5,8 +5,8 @@
     "shuffle": true,
     "zoom": true
   },
-  "layout": { "row": "top", "clock": "bottom-right", "settings": "bottom-left" },
-  "ambient": { "enabled": true, "seconds": 20 },
+  "layout": { "row": "bottom", "clock": "bottom-right", "buttons": "top-right" },
+  "ambient": { "enabled": true, "seconds": 120 },
   "remoteButtons": {
     "83": "settings",
     "4065": "com.google.android.youtube.tv",
@@ -20,10 +20,9 @@
   "items": [
     { "type": "input", "label": "Mac", "subtitle": "HDMI 1", "input": "com.tcl.tvinput/.TvPassThroughService/HW15", "logo": "apple", "colors": ["#2c2c2e", "#8e8e93"] },
     { "type": "input", "label": "PS5", "subtitle": "HDMI 2", "input": "com.tcl.tvinput/.TvPassThroughService/HW16", "logo": "playstation", "colors": ["#00246b", "#0070d1"] },
-    { "type": "app", "package": "com.google.android.youtube.tv" },
-    { "type": "app", "package": "com.amazon.amazonvideo.livingroom" },
     { "type": "app", "package": "com.stremio.one" },
-    { "type": "app", "package": "com.wireguard.android" },
-    { "type": "allApps" }
+    { "type": "app", "package": "com.wireguard.android", "inset": 0.15 },
+    { "type": "app", "package": "com.google.android.youtube.tv" },
+    { "type": "app", "package": "com.amazon.amazonvideo.livingroom" }
   ]
 }

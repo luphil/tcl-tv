@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Rect
 import android.graphics.drawable.GradientDrawable
 import android.media.tv.TvContract
 import android.os.Bundle
@@ -42,7 +43,10 @@ class HomeActivity : Activity() {
     private val chrome = mutableListOf<View>()
     private var ambient = false
     private var swallowKeyUp = -1
-    private var settingsButton: View? = null
+    private val cornerButtons = mutableListOf<View>()
+    private val cells = mutableListOf<FrameLayout>()
+    private var statusView: ViewGroup? = null
+    private var scrollerView: View? = null
 
     private var config = Config()
     private var configStamp = -1L
@@ -155,7 +159,8 @@ class HomeActivity : Activity() {
         val previous = if (::wallpaper.isInitialized) wallpaper.also { it.stop() } else null
         root.removeAllViews()
         chrome.clear()
-        settingsButton = null
+        cornerButtons.clear()
+        cells.clear()
         val tiles = Tiles(this, config.typeface(config.fontWeight))
 
         wallpaper = previous ?: WallpaperView(this)
@@ -166,8 +171,10 @@ class HomeActivity : Activity() {
         val clockGravity = cornerGravity(config.clockPosition)
         val clockOnTop = config.clockPosition.startsWith("top")
         val clockOnRight = config.clockPosition.endsWith("right")
+        // The clock shares the row's strip when they're on the same edge of the screen
+        val clockInBar = clockOnTop == rowOnTop
 
-        // A soft shade behind the row, for legibility
+        // A soft shade along the row's edge, for legibility
         root.addView(
             View(this).apply {
                 val fade = if (rowOnTop) GradientDrawable.Orientation.TOP_BOTTOM else GradientDrawable.Orientation.BOTTOM_TOP
@@ -183,57 +190,137 @@ class HomeActivity : Activity() {
             val brightness = cornerBrightness(photo, right = clockOnRight, bottom = !clockOnTop)
             glow.animate().alpha(0.45f + 0.55f * brightness).setDuration(1500).start()
         }
+        if (config.buttonsPosition != "none") addCornerButtons(tiles)
 
-        root.addView(
-            statusBlock(tiles, clockOnRight),
-            FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, clockGravity).apply {
-                // The same visible gap to the side and bottom edges (the date line's descent adds ~2dp below)
-                setMargins(tiles.dp(CORNER_X_DP), tiles.dp(CORNER_Y_DP), tiles.dp(CORNER_X_DP), tiles.dp(CORNER_Y_DP))
-            },
-        )
-        if (config.settingsPosition != "none") addSettingsButton(tiles)
-
-        // The single row of tiles. It scrolls inside a frame inset from the screen edges:
-        // tiles passing the frame's sides fade out instead of being cut by the bezel, and
-        // the scroller keeps the focused tile at least one fade-width inside the frame.
+        // The row of tiles, scrolling if they don't all fit (see fitTiles for their size).
+        // Its padding is room for the focused tile to grow and cast its shadow.
         row =
             LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
+                gravity = if (rowOnTop) Gravity.TOP else Gravity.BOTTOM
                 clipChildren = false
                 clipToPadding = false
-                // Room for the focused tile to grow (and cast its shadow) without being clipped
-                setPadding(tiles.dp(ROW_INSET_DP), tiles.dp(14), tiles.dp(ROW_INSET_DP), tiles.dp(14))
+                setPadding(tiles.dp(ROW_PAD_DP), tiles.dp(ROW_PAD_DP), tiles.dp(ROW_PAD_DP), tiles.dp(ROW_PAD_DP))
             }
         val scroller =
             HorizontalScrollView(this).apply {
                 isHorizontalScrollBarEnabled = false
                 isHorizontalFadingEdgeEnabled = true
-                setFadingEdgeLength(tiles.dp(ROW_INSET_DP))
+                // Shown only while there's more row to scroll to on that side
+                setFadingEdgeLength(tiles.dp(ROW_FADE_DP))
                 isFillViewport = false
-                clipChildren = false
+                // (Clips its row: tiles scrolled out of view must not draw over the clock)
                 addView(row)
                 chrome += this
+                addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> post { fitTiles(tiles) } }
             }
+        scrollerView = scroller
+
+        // One strip along the row's edge: the tiles, then (if it's on that edge too) the clock
+        // block, each bottom-aligned (top-aligned along the top) so their edges line up. Every
+        // outer edge sits EDGE_DP from the screen edges; the paddings and font spacing are
+        // taken off the margins so the visible gaps come out equal.
+        val bar =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = if (rowOnTop) Gravity.TOP else Gravity.BOTTOM
+                clipChildren = false
+            }
+        val status = statusBlock(tiles, clockOnRight)
+        statusView = status
+        status.addOnLayoutChangeListener { view, _, _, _, _, _, _, _, _ -> view.post { fitTiles(tiles) } }
+        // The block ends with the small lines (no font padding), so its box ends at their descent:
+        // place it so their baseline sits EDGE_DP from the screen edge, level with the tiles' bottoms
+        val descent = smallLineDescent()
+        val statusParams = { inBar: Boolean ->
+            val x = tiles.dp(EDGE_DP - STATUS_SIDE_BEARING_DP)
+            val y = if (inBar) tiles.dp(ROW_PAD_DP) - descent else tiles.dp(EDGE_DP) - descent
+            if (inBar) {
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    if (clockOnRight) marginStart = tiles.dp(BAR_GAP_DP) else marginEnd = tiles.dp(BAR_GAP_DP)
+                    if (clockOnRight) marginEnd = x - tiles.dp(EDGE_DP - ROW_PAD_DP) else marginStart = x - tiles.dp(EDGE_DP - ROW_PAD_DP)
+                    if (rowOnTop) topMargin = y else bottomMargin = y
+                }
+            } else {
+                FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, clockGravity).apply { setMargins(x, y, x, y) }
+            }
+        }
+        val scrollerParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        if (clockInBar && !clockOnRight) bar.addView(status, statusParams(true))
+        bar.addView(scroller, scrollerParams)
+        if (clockInBar && clockOnRight) bar.addView(status, statusParams(true))
+        if (!clockInBar) root.addView(status, statusParams(false))
+        val barInset = tiles.dp(EDGE_DP - ROW_PAD_DP)
         root.addView(
-            scroller,
+            bar,
             FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, if (rowOnTop) Gravity.TOP else Gravity.BOTTOM).apply {
-                setMargins(tiles.dp(ROW_MARGIN_DP), if (rowOnTop) tiles.dp(32) else 0, tiles.dp(ROW_MARGIN_DP), if (rowOnTop) 0 else tiles.dp(32))
+                setMargins(barInset, barInset, barInset, barInset)
             },
         )
 
-        // Size the tiles so the whole row fits on screen (never larger than the standard size)
-        val shown = config.items.count { it !is Config.Item.App || tiles.launchIntent(it.packageName) != null }
-        val roomDp = resources.configuration.screenWidthDp - 2 * (ROW_MARGIN_DP + ROW_INSET_DP) - (shown - 1) * TILE_GAP_DP
-        val tileWidthDp = if (shown > 0) minOf(Tiles.WIDTH_DP, roomDp / shown) else Tiles.WIDTH_DP
-        config.items.forEach { item -> addTile(item, tiles, tileWidthDp) }
+        config.items.forEach { item -> addTile(item, tiles) }
         firstTile()?.requestFocus()
     }
+
+    /**
+     * Make the tiles exactly as tall as the clock block beside them, from the top of the time's
+     * digits to the date's baseline, so the strip reads as one band. (Standard size if there's
+     * no clock in the strip.) If they're then too wide to all fit, the row scrolls.
+     */
+    private fun fitTiles(tiles: Tiles) {
+        if (cells.isEmpty()) return
+        val status = statusView
+        val clockView = if (::clock.isInitialized) clock else null
+        val height =
+            if (status != null && clockView != null && status.parent == scrollerView?.parent && status.height > 0) {
+                val digits = Rect()
+                clockView.paint.getTextBounds("0123456789", 0, 10, digits)
+                val box = Rect(0, 0, clockView.width, clockView.height)
+                status.offsetDescendantRectToMyCoords(clockView, box)
+                val digitTop = box.top + clockView.baseline + digits.top
+                status.height - smallLineDescent() - digitTop
+            } else {
+                tiles.dp(Tiles.HEIGHT_DP)
+            }
+        // The tiles fill the row exactly, so the gap from the last one to the clock block matches
+        // the screen margins, as long as that only means changing their natural width a little
+        // (banners crop from the centre); otherwise they keep it and the row scrolls
+        val natural = height * Tiles.WIDTH_DP / Tiles.HEIGHT_DP
+        val rowWidth = scrollerView?.width ?: 0
+        val fit = (rowWidth - 2 * tiles.dp(ROW_PAD_DP) - (cells.size - 1) * tiles.dp(TILE_GAP_DP)) / cells.size
+        val width = if (rowWidth > 0 && fit >= natural * MIN_SQUEEZE && fit <= natural * MAX_STRETCH) fit else natural
+        cells.forEach { tile ->
+            resize(tile, width, height)
+            tiles.logoIn(tile)?.let { (logo, scale) -> (height * Tiles.LOGO_SHARE * scale).toInt().let { resize(logo, it, it) } }
+        }
+    }
+
+    private fun resize(
+        view: View,
+        width: Int,
+        height: Int,
+    ) {
+        val params = view.layoutParams
+        if (params.width != width || params.height != height) {
+            params.width = width
+            params.height = height
+            view.layoutParams = params
+        }
+    }
+
+    /** How far the small lines (weather conditions, date) reach below their baseline. */
+    private fun smallLineDescent(): Int =
+        TextView(this)
+            .apply {
+                typeface = config.typeface(config.fontWeight)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, SMALL_LINE_SP)
+            }.paint.fontMetricsInt.descent
 
     /** Weather (icon, temperature; conditions and today's high/low) beside the clock (time; date). */
     private fun statusBlock(
         tiles: Tiles,
         clockOnRight: Boolean,
-    ): View {
+    ): ViewGroup {
         // Bottom-aligned, so the two small lines share a baseline under the two big ones
         val status =
             LinearLayout(this).apply {
@@ -256,10 +343,13 @@ class HomeActivity : Activity() {
             now.addView(weatherIcon, LinearLayout.LayoutParams(tiles.dp(26), tiles.dp(26)).apply { marginEnd = tiles.dp(8) })
             weatherText = tiles.text("", 30f, Color.WHITE)
             weatherText.typeface = config.typeface(config.clockWeight)
+            weatherText.includeFontPadding = false
             now.addView(weatherText)
-            weather.addView(now)
-            weatherDetail = tiles.text("", 12f, Color.WHITE)
-            weather.addView(weatherDetail)
+            // Lines take their natural width (a vertical layout would stretch them), so the
+            // column's alignment applies: right-aligned in a right-hand corner
+            weather.addView(now, wrapContent())
+            weatherDetail = tiles.text("", SMALL_LINE_SP, Color.WHITE).apply { includeFontPadding = false }
+            weather.addView(weatherDetail, wrapContent().apply { topMargin = gapUnder(weatherText, tiles) })
             status.addView(weather)
             // A hairline between weather and clock
             status.addView(
@@ -278,22 +368,25 @@ class HomeActivity : Activity() {
                     format24Hour = config.clockFormat
                     format12Hour = config.clockFormat
                     this.typeface = config.typeface(config.clockWeight)
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 40f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 34f)
                     setTextColor(Color.WHITE)
                     setShadowLayer(10f, 0f, 2f, Color.argb(160, 0, 0, 0))
                     includeFontPadding = false
                 }
-            clockColumn.addView(clock)
+            clockColumn.addView(clock, wrapContent())
+            val clockGap = gapUnder(clock, tiles)
             if (config.dateFormat.isNotBlank()) {
                 clockColumn.addView(
                     TextClock(this).apply {
                         format24Hour = config.dateFormat
                         format12Hour = config.dateFormat
                         this.typeface = config.typeface(config.fontWeight)
-                        setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                        setTextSize(TypedValue.COMPLEX_UNIT_SP, SMALL_LINE_SP)
                         setTextColor(Color.WHITE)
                         setShadowLayer(8f, 0f, 2f, Color.argb(160, 0, 0, 0))
+                        includeFontPadding = false
                     },
+                    wrapContent().apply { topMargin = clockGap },
                 )
             }
             status.addView(clockColumn)
@@ -301,35 +394,64 @@ class HomeActivity : Activity() {
         return status
     }
 
-    /** A small, quiet cog in a corner; fully visible only when focused. */
-    private fun addSettingsButton(tiles: Tiles) {
-        val button =
-            FrameLayout(this).apply {
-                isFocusable = true
-                isClickable = true
-                alpha = SETTINGS_IDLE_ALPHA
-                background =
-                    GradientDrawable().apply {
-                        shape = GradientDrawable.OVAL
-                        setColor(Color.TRANSPARENT)
-                    }
-                setOnFocusChangeListener { view, focused ->
-                    (view.background as GradientDrawable).setColor(if (focused) Color.argb(70, 255, 255, 255) else Color.TRANSPARENT)
-                    view.animate().alpha(if (focused) 1f else SETTINGS_IDLE_ALPHA).scaleX(if (focused) 1.1f else 1f).scaleY(if (focused) 1.1f else 1f).setDuration(150).start()
-                }
-                setOnClickListener { launch(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                contentDescription = "Settings"
-                addView(ImageView(this@HomeActivity).apply { setImageResource(R.drawable.ic_settings) }, FrameLayout.LayoutParams(tiles.dp(24), tiles.dp(24), Gravity.CENTER))
-                chrome += this
-            }
-        settingsButton = button
+    /** Small, quiet icon buttons in a corner (all apps, settings); fully visible only when focused. */
+    private fun addCornerButtons(tiles: Tiles) {
+        val position = config.buttonsPosition
+        val onRight = position.endsWith("right")
+        // A little shade so the icons read on bright photos
         root.addView(
-            button,
-            FrameLayout.LayoutParams(tiles.dp(44), tiles.dp(44), cornerGravity(config.settingsPosition)).apply {
-                // Its icon sits the same distance from the edges as the clock and weather, level with the
-                // date line; the round focus backdrop (10dp around the icon) reaches just past that.
-                // The icon's lines are drawn 2dp inside its box.
-                setMargins(tiles.dp(CORNER_X_DP - 12), tiles.dp(CORNER_Y_DP - 10), tiles.dp(CORNER_X_DP - 12), tiles.dp(CORNER_Y_DP - 10))
+            CornerGlow(this, right = onRight, bottom = position.startsWith("bottom")).apply {
+                alpha = 0.6f
+                chrome += this
+            },
+            FrameLayout.LayoutParams(tiles.dp(220), tiles.dp(220), cornerGravity(position)),
+        )
+        val group =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                // The focused button grows past its box: leave room for its round backdrop
+                clipChildren = false
+                clipToPadding = false
+                val room = tiles.dp(BUTTON_GROW_ROOM_DP)
+                setPadding(room, room, room, room)
+            }
+        // Settings, then all apps, left to right
+        val buttons =
+            listOf(
+                Triple(R.drawable.ic_settings, "Settings") { launch(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) },
+                Triple(R.drawable.ic_all_apps, "All apps") { launch(Intent(this, AllAppsActivity::class.java)) },
+            )
+        buttons.forEach { (icon, name, action) ->
+            val button =
+                FrameLayout(this).apply {
+                    isFocusable = true
+                    isClickable = true
+                    alpha = BUTTON_IDLE_ALPHA
+                    contentDescription = name
+                    background =
+                        GradientDrawable().apply {
+                            shape = GradientDrawable.OVAL
+                            setColor(Color.TRANSPARENT)
+                        }
+                    setOnFocusChangeListener { view, focused ->
+                        (view.background as GradientDrawable).setColor(if (focused) Color.argb(85, 24, 24, 26) else Color.TRANSPARENT)
+                        val scale = if (focused) 1.1f else 1f
+                        view.animate().alpha(if (focused) 1f else BUTTON_IDLE_ALPHA).scaleX(scale).scaleY(scale).setDuration(150).start()
+                    }
+                    setOnClickListener { action() }
+                    addView(ImageView(this@HomeActivity).apply { setImageResource(icon) }, FrameLayout.LayoutParams(tiles.dp(BUTTON_ICON_DP), tiles.dp(BUTTON_ICON_DP), Gravity.CENTER))
+                    chrome += this
+                }
+            cornerButtons += button
+            group.addView(button, LinearLayout.LayoutParams(tiles.dp(BUTTON_DP), tiles.dp(BUTTON_DP)))
+        }
+        // The icons' outer edges sit EDGE_DP from the screen edges: take off the backdrop around
+        // each icon and the ~2dp its lines are drawn inside their box
+        val inset = tiles.dp(EDGE_DP - (BUTTON_DP - BUTTON_ICON_DP) / 2 - 2 - BUTTON_GROW_ROOM_DP)
+        root.addView(
+            group,
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, cornerGravity(position)).apply {
+                setMargins(inset, inset, inset, inset)
             },
         )
     }
@@ -337,16 +459,12 @@ class HomeActivity : Activity() {
     private fun addTile(
         item: Config.Item,
         tiles: Tiles,
-        widthDp: Int,
     ) {
-        val heightDp = widthDp * Tiles.HEIGHT_DP / Tiles.WIDTH_DP
-        var name: String? = null
         val (tile, action) =
             when (item) {
                 is Config.Item.App -> {
                     val launch = tiles.launchIntent(item.packageName) ?: return // not installed
-                    name = item.label ?: tiles.appLabel(item.packageName)
-                    tiles.appTile(item.packageName, launch) to { launch(launch) }
+                    tiles.appTile(item.packageName, launch, item.inset) to { launch(launch) }
                 }
 
                 is Config.Item.Input -> {
@@ -364,30 +482,15 @@ class HomeActivity : Activity() {
                 }
             }
         tile.setOnClickListener { action() }
-
-        // Each tile sits over its name, which appears only while it's focused (apps only:
-        // input and text tiles already say what they are)
-        val cell =
-            LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                clipChildren = false
-            }
-        cell.addView(tile, LinearLayout.LayoutParams(tiles.dp(widthDp), tiles.dp(heightDp)))
-        val label =
-            tiles.text(name ?: "", 11f, Color.WHITE).apply {
-                alpha = 0f
-                maxLines = 1
-            }
-        cell.addView(label, LinearLayout.LayoutParams(tiles.dp(widthDp), ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = tiles.dp(12) })
-        val focus = tile.onFocusChangeListener
-        tile.setOnFocusChangeListener { view, focused ->
-            focus.onFocusChange(view, focused)
-            if (name != null) label.animate().alpha(if (focused) 1f else 0f).setDuration(150).start()
-        }
-        row.addView(cell, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = tiles.dp(TILE_GAP_DP) })
+        // fitTiles sets the real size once the clock block is laid out
+        cells += tile
+        row.addView(
+            tile,
+            LinearLayout.LayoutParams(tiles.dp(Tiles.WIDTH_DP), tiles.dp(Tiles.HEIGHT_DP)).apply { if (cells.size > 1) marginStart = tiles.dp(TILE_GAP_DP) },
+        )
     }
 
-    private fun firstTile(): View? = (row.getChildAt(0) as? ViewGroup)?.getChildAt(0)
+    private fun firstTile(): View? = cells.firstOrNull()
 
     // Ambient mode: with no button pressed for a while, the row and cog fade away
     // and only the photo, clock and weather stay. Any button brings them back
@@ -420,8 +523,14 @@ class HomeActivity : Activity() {
         ambient = on
         chrome.forEach { view ->
             view.animate().cancel()
-            // The cog rests at its own, lower opacity
-            val target = if (on) 0f else if (view == settingsButton && !view.isFocused) SETTINGS_IDLE_ALPHA else 1f
+            // The corner buttons rest at their own, lower opacity; the glow behind them too
+            val target =
+                when {
+                    on -> 0f
+                    view in cornerButtons && !view.isFocused -> BUTTON_IDLE_ALPHA
+                    view is CornerGlow -> 0.6f
+                    else -> 1f
+                }
             if (animate) view.animate().alpha(target).setDuration(if (on) AMBIENT_FADE_OUT_MS else AMBIENT_FADE_IN_MS).start() else view.alpha = target
         }
         if (!on) restartIdleTimer()
@@ -461,6 +570,18 @@ class HomeActivity : Activity() {
             else -> Gravity.TOP or Gravity.END
         }
 
+    /**
+     * The gap to leave under a big line (temperature, time) before its small line, so that both
+     * big lines' baselines sit at the same height whatever their sizes: the gap plus the font's
+     * descent below the baseline always comes to the same total.
+     */
+    private fun gapUnder(
+        big: TextView,
+        tiles: Tiles,
+    ): Int = maxOf(0, tiles.dp(BASELINE_TO_SMALL_LINE_DP) - big.paint.fontMetricsInt.descent)
+
+    private fun wrapContent() = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+
     private fun matchParent() = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
 
     /** Average brightness (0-1) of the screen corner the photo will cover, as shown centre-cropped. */
@@ -497,16 +618,35 @@ class HomeActivity : Activity() {
         private const val WEATHER_INTERVAL_MS = 30 * 60 * 1000L
         private const val CONFIG_RETRY_MS = 3000L
 
-        // Gap between the screen edge and the row's frame, and the fade inside it
-        private const val ROW_MARGIN_DP = 16
-        private const val ROW_INSET_DP = 32
+        // Visible gap between the screen edges and everything at them: tiles, clock block, icons
+        private const val EDGE_DP = 21
+
+        // The clock's last digit sits ~1dp inside its box; taken off its side margin
+        private const val STATUS_SIDE_BEARING_DP = 1
+
+        // Weather conditions and date
+        private const val SMALL_LINE_SP = 12f
+
+        // Room around the tiles for the focused one to grow; gaps between tiles and before the clock
+        private const val ROW_PAD_DP = 14
         private const val TILE_GAP_DP = 14
+        // Between the row and the clock block: with the row's end padding, the visible gap is EDGE_DP
+        private const val BAR_GAP_DP = EDGE_DP - ROW_PAD_DP
+        private const val ROW_FADE_DP = 32
 
-        // Distance from the screen's side and bottom edges to the clock/weather block and the cog
-        private const val CORNER_X_DP = 20
-        private const val CORNER_Y_DP = 18
+        // How much narrower or wider than natural the tiles may get to fill the row exactly
+        private const val MIN_SQUEEZE = 0.85f
+        private const val MAX_STRETCH = 1.2f
 
-        private const val SETTINGS_IDLE_ALPHA = 0.55f
+        // From the temperature's and time's baselines down to the top of the small lines below
+        private const val BASELINE_TO_SMALL_LINE_DP = 14
+
+        private const val BUTTON_IDLE_ALPHA = 0.55f
+
+        // Corner buttons: the icon, and the round focus backdrop around it
+        private const val BUTTON_ICON_DP = 20
+        private const val BUTTON_DP = 36
+        private const val BUTTON_GROW_ROOM_DP = 4
         private const val AMBIENT_FADE_OUT_MS = 1200L
         private const val AMBIENT_FADE_IN_MS = 250L
     }

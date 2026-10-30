@@ -3,6 +3,8 @@ package local.tvhome
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Outline
 import android.graphics.Typeface
@@ -42,14 +44,23 @@ class Tiles(
     fun appTile(
         packageName: String,
         launch: Intent,
+        inset: Float = 0f,
     ): FrameLayout {
         val tile = baseTile()
         val banner = banner(packageName, launch)
         if (banner != null) {
+            if (inset > 0f) tile.setBackgroundColor(cornerColour(banner))
             tile.addView(
                 ImageView(context).apply {
                     setImageDrawable(banner)
-                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    // Inset banners shrink whole inside the tile; others fill it, cropped from the centre
+                    if (inset > 0f) {
+                        scaleType = ImageView.ScaleType.FIT_CENTER
+                        scaleX = 1f - inset
+                        scaleY = 1f - inset
+                    } else {
+                        scaleType = ImageView.ScaleType.CENTER_CROP
+                    }
                 },
                 FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT),
             )
@@ -99,16 +110,44 @@ class Tiles(
                 gravity = Gravity.CENTER
             }
         if (logoRes != null) {
-            column.addView(ImageView(context).apply { setImageResource(logoRes) }, LinearLayout.LayoutParams(dp(30), dp(30)))
+            // The logo is the point of the tile: sized with it (see logoIn), the input name small below
+            val size = (dp(HEIGHT_DP) * LOGO_SHARE * logoScale(logo)).toInt()
+            column.addView(
+                ImageView(context).apply {
+                    setImageResource(logoRes)
+                    tag = logoScale(logo)
+                },
+                LinearLayout.LayoutParams(size, size),
+            )
+            if (subtitle != null) column.addView(text(subtitle, 8f, Color.argb(200, 255, 255, 255)).apply { setPadding(0, dp(3), 0, 0) })
         } else {
             column.addView(text(title, 20f, Color.WHITE))
-        }
-        if (subtitle != null) {
-            column.addView(text(subtitle, 10f, Color.argb(200, 255, 255, 255)).apply { setPadding(0, dp(4), 0, 0) })
+            if (subtitle != null) column.addView(text(subtitle, 10f, Color.argb(200, 255, 255, 255)).apply { setPadding(0, dp(4), 0, 0) })
         }
         tile.addView(column, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         return tile
     }
+
+    /** The colour in a banner's top-left corner (its background, for most banners). */
+    private fun cornerColour(banner: Drawable): Int {
+        val sample = Bitmap.createBitmap(32, 18, Bitmap.Config.ARGB_8888)
+        val bounds = banner.copyBounds()
+        banner.setBounds(0, 0, 32, 18)
+        banner.draw(Canvas(sample))
+        banner.bounds = bounds
+        return sample.getPixel(1, 1).also { sample.recycle() }
+    }
+
+    /** An input tile's logo and its size scale, to resize it with the tile. */
+    fun logoIn(tile: FrameLayout): Pair<ImageView, Float>? {
+        val column = tile.getChildAt(0) as? LinearLayout ?: return null
+        val logo = column.getChildAt(0) as? ImageView ?: return null
+        return (logo.tag as? Float)?.let { logo to it }
+    }
+
+    // Logos fill their square box differently: the PlayStation mark is wide and short,
+    // so it gets a bigger box to look the same size as the Apple one
+    private fun logoScale(logo: String?) = if (logo == "playstation") 1.25f else 1f
 
     /** A text-only tile, used for settings, all apps and inputs without a logo or colours. */
     fun textTile(
@@ -162,7 +201,7 @@ class Tiles(
                     ) = outline.setRoundRect(0, 0, view.width, view.height, dp(10).toFloat())
                 }
             // Every tile shares one look whatever its banner: a faint edge and a soft shadow,
-            // slightly dimmed until focused, when it brightens, lifts and gets a white ring
+            // slightly dimmed until focused, when it brightens and rises on a deeper shadow
             elevation = dp(4).toFloat()
             foreground =
                 GradientDrawable().apply {
@@ -171,13 +210,11 @@ class Tiles(
                 }
             setOnFocusChangeListener { view, focused ->
                 styleRing((view as FrameLayout).foreground as GradientDrawable, focused)
-                val scale = if (focused) 1.12f else 1f
                 view
                     .animate()
-                    .scaleX(scale)
-                    .scaleY(scale)
-                    .translationZ(if (focused) dp(8).toFloat() else 0f)
-                    .setDuration(150)
+                    .translationY(if (focused) -dp(RISE_DP).toFloat() else 0f)
+                    .translationZ(if (focused) dp(10).toFloat() else 0f)
+                    .setDuration(180)
                     .start()
             }
         }
@@ -186,8 +223,8 @@ class Tiles(
         ring: GradientDrawable,
         focused: Boolean,
     ) {
-        ring.setColor(if (focused) Color.TRANSPARENT else Color.argb(46, 0, 0, 0))
-        if (focused) ring.setStroke(dp(3), Color.WHITE) else ring.setStroke(dp(1), Color.argb(46, 255, 255, 255))
+        ring.setColor(if (focused) Color.TRANSPARENT else Color.argb(56, 0, 0, 0))
+        ring.setStroke(dp(1), Color.argb(46, 255, 255, 255))
     }
 
     private fun cardBackground() =
@@ -199,5 +236,11 @@ class Tiles(
     companion object {
         const val WIDTH_DP = 132
         const val HEIGHT_DP = 74
+
+        // How far the focused tile rises
+        const val RISE_DP = 8
+
+        // Logo size on input tiles, as a share of the tile's height
+        const val LOGO_SHARE = 0.5f
     }
 }

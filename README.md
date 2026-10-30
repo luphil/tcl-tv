@@ -8,7 +8,7 @@ Everything is controlled from a Mac over Wi-Fi with `adb`.
 
 | Path | What it is |
 |---|---|
-| `launcher/` | **TV Home**, the homescreen app (Kotlin, no third-party libraries). A row of app and HDMI-input tiles (sized to fit the screen; inputs can show a logo on brand colours), your photos as a slowly zooming slideshow, clock, date and weather with today's high/low (Open-Meteo, no account), a quiet settings cog, an ambient mode that hides the row when idle, and remote-button remapping. Weather and settings icons are from [Lucide](https://lucide.dev) (ISC); the Apple and PlayStation logos from [Simple Icons](https://simpleicons.org) (CC0). |
+| `launcher/` | **TV Home**, the homescreen app (Kotlin, no third-party libraries). A row of app and HDMI-input tiles (sized to fit the screen; inputs can show a logo on brand colours), your photos as a slowly zooming slideshow, clock, date and weather with today's high/low (Open-Meteo, no account), quiet all-apps and settings icons, an ambient mode that hides the tiles when idle, and remote-button remapping. Weather and settings icons are from [Lucide](https://lucide.dev) (ISC); the Apple and PlayStation logos from [Simple Icons](https://simpleicons.org) (CC0). |
 | `home/config.json` | Everything the homescreen shows: tile order, HDMI inputs, layout, font, wallpaper timing, weather location, remote buttons. |
 | `home/fonts/` | Space Grotesk ([SIL Open Font License](home/fonts/OFL.txt)). |
 | `aerial-views/notracking-openmeteo.patch` | Changes to [Aerial Views](https://github.com/theothernt/AerialViews) 1.8.5: weather via Open-Meteo instead of OpenWeather (no API key), plus a system-wallpaper rotator. Build its `fdroid` flavour to leave out Firebase. |

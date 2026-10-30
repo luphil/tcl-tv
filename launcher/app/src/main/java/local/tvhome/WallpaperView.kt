@@ -40,8 +40,10 @@ class WallpaperView(
     private var seconds = 45
     private var zoom = true
     private var running = false
+    // The photo on screen (for the boot photo: the folder photo it was made from)
     private var current: File? = null
     private val bootPhoto = File(context.filesDir, "boot-photo.jpg")
+    private val bootSource = File(context.filesDir, "boot-photo.source")
 
     private val advance = Runnable { showNext() }
 
@@ -85,10 +87,17 @@ class WallpaperView(
         if (running) return
         running = true
         rescan()
-        // Keep showing the current photo on return; only load one if nothing is up yet
+        // A boot photo whose original was taken out of the folder is dropped (and replaced
+        // by the next photo shown). If the folder can't be read yet, as just after boot, keep it.
+        if (bootPhoto.exists() && photos.isNotEmpty() && photos.none { it.path == bootSourcePath() }) {
+            bootPhoto.delete()
+            bootSource.delete()
+        }
+        // Keep showing the current photo on return, unless it has been taken out of the folder;
+        // only load one if nothing is up yet
         when {
-            front.drawable != null -> scheduleNext()
-            bootPhoto.exists() -> showBootPhoto()
+            front.drawable != null && (photos.isEmpty() || current == null || current in photos) -> scheduleNext()
+            front.drawable == null && bootPhoto.exists() -> showBootPhoto()
             else -> showNext()
         }
     }
@@ -150,6 +159,7 @@ class WallpaperView(
                 front.setImageBitmap(bitmap)
                 front.tag = bitmap
                 front.alpha = 1f
+                current = bootSourcePath()?.let { File(it) }
                 if (zoom) startZoom()
                 scheduleNext()
             }
@@ -172,6 +182,7 @@ class WallpaperView(
                 val temp = File(bootPhoto.path + ".tmp")
                 temp.outputStream().use { screen.compress(Bitmap.CompressFormat.JPEG, 92, it) }
                 temp.renameTo(bootPhoto)
+                bootSource.writeText(file.path)
                 WallpaperManager.getInstance(context).apply {
                     suggestDesiredDimensions(width, height)
                     setBitmap(screen)
@@ -213,6 +224,8 @@ class WallpaperView(
             }.start()
         scheduleNext()
     }
+
+    private fun bootSourcePath(): String? = if (bootSource.exists()) bootSource.readText().trim() else null
 
     private fun startZoom() {
         front

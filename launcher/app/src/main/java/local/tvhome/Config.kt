@@ -18,8 +18,8 @@ data class Config(
     val dateFormat: String = "EEE d MMM",
     // Seconds without a button press before the row fades away, leaving photo, clock and weather; 0 = never
     val ambientSeconds: Int = 20,
-    // Corner for the small settings button ("bottom-left", ...), or "none"
-    val settingsPosition: String = "bottom-left",
+    // Corner for the small all-apps and settings buttons ("top-right", ...), or "none"
+    val buttonsPosition: String = "top-right",
     // Path to a .ttf/.otf on the TV (e.g. /sdcard/TVHome/fonts/Inter.ttf); null = system font
     val font: String? = null,
     // "top" or "bottom"
@@ -62,6 +62,9 @@ data class Config(
         data class App(
             val packageName: String,
             override val label: String?,
+            // Shrinks the app's banner inside its tile (0-0.4 of its size), for banners that run
+            // to their edges; the space around it is filled with the banner's own background
+            val inset: Float = 0f,
         ) : Item()
 
         data class Input(
@@ -141,7 +144,7 @@ data class Config(
                     val item = itemsJson!!.getJSONObject(i)
                     val label = item.optString("label").ifBlank { null }
                     when (item.optString("type")) {
-                        "app" -> Item.App(item.getString("package"), label)
+                        "app" -> Item.App(item.getString("package"), label, item.optDouble("inset", 0.0).toFloat().coerceIn(0f, 0.4f))
                         "input" ->
                             Item.Input(
                                 item.getString("input"),
@@ -168,7 +171,7 @@ data class Config(
                     json.optJSONObject("ambient")?.let {
                         if (it.optBoolean("enabled", true)) it.optInt("seconds", defaults.ambientSeconds).coerceAtLeast(0) else 0
                     } ?: defaults.ambientSeconds,
-                settingsPosition = layout.optString("settings", defaults.settingsPosition),
+                buttonsPosition = layout.optString("buttons", defaults.buttonsPosition),
                 font = json.optString("font").ifBlank { null },
                 rowPosition = layout.optString("row", defaults.rowPosition),
                 clockPosition = layout.optString("clock", defaults.clockPosition),
