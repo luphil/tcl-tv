@@ -28,6 +28,7 @@ class DrumsActivity : Activity() {
     private var kits: List<String> = emptyList()
     private val loaded = HashMap<String, DrumKit>()
     private var kit = ""
+    private var chosenKit: String? = null
     private var bpm = 100
     private var playing = false
     private val typed = StringBuilder()
@@ -45,7 +46,9 @@ class DrumsActivity : Activity() {
     private var swing = 0
     private var humanise = 3
     private var seed = Random.nextInt(1, 1_000_000)
-    private val levels = BeatGenerator.GROUPS.keys.associateWith { 8 }.toMutableMap()
+    private val levels = BeatGenerator.GROUPS.keys.associateWith { DEFAULT_VOLUME }.toMutableMap()
+    private val busy = BeatGenerator.defaultBusy(BeatGenerator.STYLES[0]).toMutableMap()
+    private var editingBusy = true
     private var generated: Beat? = null
 
     private val styles get() = (if (saved.isNotEmpty()) listOf(SAVED) else emptyList()) + library.styles
@@ -65,6 +68,7 @@ class DrumsActivity : Activity() {
         page = DrumsView(this, config.typeface(config.fontWeight))
         page.tabs = listOf("Library", "Generator")
         page.playingStep = { engine.playingStep }
+        page.rowLevel = { role -> rowLevel(role) }
         setContentView(page)
 
         engine.bpm = bpm
@@ -73,7 +77,8 @@ class DrumsActivity : Activity() {
             page.status = "No drum kits on the TV: run drums-apply.sh"
         } else {
             loader.execute { DrumKit.load("perc")?.let { engine.percussion = it; warm(it) } }
-            useKit(inStyle().first().kit)
+            chosenKit = prefs.getString(KEY_KIT, null)?.takeIf { it in kits }
+            useKit(chosenKit ?: inStyle().first().kit)
         }
         showPage()
     }
@@ -91,6 +96,11 @@ class DrumsActivity : Activity() {
     }
 
     private fun warm(source: DrumKit) = BeatLibrary.ROLES.values.forEach { source.warm(it) }
+
+    // Beats and styles suggest a kit, but one the viewer has picked always stays
+    private fun suggestKit(id: String) {
+        if (chosenKit == null) useKit(id)
+    }
 
     private fun useKit(id: String) {
         val wanted = if (id in kits) id else kits.first()
@@ -134,7 +144,7 @@ class DrumsActivity : Activity() {
         }
         val drumRows =
             BeatGenerator.GROUPS.keys.map { group ->
-                DrumsView.Row(group, { levels.getValue(group).let { if (it == 0) "Off" else it.toString() } }, { step -> setLevel(group, step) })
+                DrumsView.Row(group, { drumValue(group) }, { step -> changeDrum(group, step) }, { editingBusy = !editingBusy }, arrows = false)
             }
         return listOf(
             tabRow,
@@ -147,8 +157,8 @@ class DrumsActivity : Activity() {
             tempoRow,
         ) + drumRows +
             listOf(
-                DrumsView.Row("Generate", { "New beat" }, null) { seed = Random.nextInt(1, 1_000_000); regenerate(); if (!playing) play() },
-                DrumsView.Row("Save", { "Keep this beat" }, null) { saveBeat() },
+                DrumsView.Row("Generate", { "New beat" }, press = { seed = Random.nextInt(1, 1_000_000); regenerate(); if (!playing) play() }),
+                DrumsView.Row("Save", { "Keep this beat" }, press = { saveBeat() }),
             )
     }
 
@@ -162,40 +172,50 @@ class DrumsActivity : Activity() {
         page.chosen = entry
         page.status = if (kits.isEmpty()) page.status else if (playing) "Playing" else "Press OK to play"
         page.playing = playing
-        page.hint = "OK  play / stop     Up / Down  choose     Left / Right  change     0-9  type a tempo     Back  exit"
+        val onDrum = page.rows.getOrNull(page.selected)?.label in BeatGenerator.GROUPS.keys
+        page.hint =
+            if (onDrum) {
+                "OK  switch Busy / Volume     Up / Down  choose     Left / Right  change     Back  exit"
+            } else {
+                "OK  play / stop     Up / Down  choose     Left / Right  change     0-9  type a tempo     Back  exit"
+            }
         page.invalidate()
     }
 
     private fun switchTab() {
         page.tab = 1 - page.tab
         if (page.tab == TAB_GENERATOR && generated == null) regenerate()
-        useKit(if (page.tab == TAB_LIBRARY) inStyle()[entry].kit else BeatGenerator.STYLES[generatorStyle].kit)
+        suggestKit(if (page.tab == TAB_LIBRARY) inStyle()[entry].kit else BeatGenerator.STYLES[generatorStyle].kit)
         beatChanged()
     }
 
     private fun stepStyle(step: Int) {
         style = (style + step).mod(styles.size)
         entry = 0
-        useKit(inStyle()[entry].kit)
+        suggestKit(inStyle()[entry].kit)
         beatChanged()
     }
 
     private fun stepBeat(step: Int) {
         entry = (entry + step).mod(inStyle().size)
-        useKit(inStyle()[entry].kit)
+        suggestKit(inStyle()[entry].kit)
         beatChanged()
     }
 
     private fun stepKit(step: Int) {
         if (kits.isEmpty()) return
-        useKit(kits[(kits.indexOf(kit) + step).mod(kits.size)])
+        val picked = kits[(kits.indexOf(kit) + step).mod(kits.size)]
+        chosenKit = picked
+        prefs.edit().putString(KEY_KIT, picked).apply()
+        useKit(picked)
     }
 
     private fun stepGeneratorStyle(step: Int) {
         generatorStyle = (generatorStyle + step).mod(BeatGenerator.STYLES.size)
         val chosen = BeatGenerator.STYLES[generatorStyle]
         swing = (chosen.swing * 10).toInt()
-        useKit(chosen.kit)
+        busy.putAll(BeatGenerator.defaultBusy(chosen))
+        suggestKit(chosen.kit)
         regenerate()
     }
 
@@ -205,21 +225,40 @@ class DrumsActivity : Activity() {
         regenerate()
     }
 
-    private fun setLevel(
+    // Both numbers, with arrows on the one that left/right will change
+    private fun drumValue(group: String): String {
+        val selected = page.rows.getOrNull(page.selected)?.label == group
+        val busyText = busy.getValue(group).let { if (it == 0) "Off" else it.toString() }
+        val volumeText = levels.getValue(group).toString()
+        val left = if (selected && editingBusy) "‹ $busyText ›" else busyText
+        val right = if (selected && !editingBusy) "‹ $volumeText ›" else volumeText
+        return "Busy $left    Volume $right"
+    }
+
+    // Busy changes the beat; volume only how loud it is
+    private fun changeDrum(
         group: String,
         step: Int,
     ) {
-        val was = levels.getValue(group)
-        levels[group] = (was + step).coerceIn(0, 10)
-        applyVolumes()
-        // Switching a drum on or off changes the beat; turning it up or down doesn't
-        if ((was == 0) != (levels[group] == 0)) regenerate()
+        if (editingBusy) {
+            busy[group] = (busy.getValue(group) + step).coerceIn(0, 10)
+            regenerate()
+        } else {
+            levels[group] = (levels.getValue(group) + step).coerceIn(0, 10)
+            applyVolumes()
+        }
+    }
+
+    private fun rowLevel(role: String): Float {
+        if (page.tab != TAB_GENERATOR) return 1f
+        val group = BeatGenerator.GROUPS.entries.firstOrNull { role in it.value }?.key ?: return 1f
+        return levels.getValue(group) / 10f
     }
 
     private fun applyVolumes() {
         engine.volumes =
             if (page.tab == TAB_GENERATOR) {
-                BeatGenerator.GROUPS.entries.flatMap { (group, roles) -> roles.map { it to levels.getValue(group) / 8f } }.toMap()
+                BeatGenerator.GROUPS.entries.flatMap { (group, roles) -> roles.map { it to levels.getValue(group) / DEFAULT_VOLUME.toFloat() } }.toMap()
             } else {
                 emptyMap()
             }
@@ -233,7 +272,7 @@ class DrumsActivity : Activity() {
     private fun regenerate() {
         generated =
             BeatGenerator.generate(
-                BeatGenerator.Settings(BeatGenerator.STYLES[generatorStyle], complexity, bars, levels, swing / 10f, seed),
+                BeatGenerator.Settings(BeatGenerator.STYLES[generatorStyle], complexity, bars, busy, swing / 10f, seed),
             )
         beatChanged()
     }
@@ -365,12 +404,14 @@ class DrumsActivity : Activity() {
     companion object {
         private const val SAVED = "Saved"
         private const val KEY_SAVED = "saved"
+        private const val KEY_KIT = "kit"
         private const val KEY_HUMANISE = "humanise"
         private const val TAB_LIBRARY = 0
         private const val TAB_GENERATOR = 1
         private const val MIN_BPM = 30
         private const val MAX_BPM = 300
         private const val TYPING_PAUSE_MS = 1200L
+        private const val DEFAULT_VOLUME = 8
         private val KIT_NAMES = mapOf("big" to "Big Rock Kit", "studio" to "Studio Kit", "vintage" to "Vintage 70s Kit", "brushes" to "Brushes", "808" to "TR-808 Style", "909" to "TR-909 Style", "trap" to "Trap 808")
     }
 }

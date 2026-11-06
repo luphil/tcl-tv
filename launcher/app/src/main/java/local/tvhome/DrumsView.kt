@@ -17,6 +17,7 @@ class DrumsView(
         val value: () -> String,
         val change: ((Int) -> Unit)? = null,
         val press: (() -> Unit)? = null,
+        val arrows: Boolean = true,
     )
 
     var title = "Drums"
@@ -31,6 +32,7 @@ class DrumsView(
     var hint = ""
     var playing = false
     var playingStep: () -> Int = { -1 }
+    var rowLevel: (String) -> Float = { 1f } // How far each drum is turned up, to dim quiet rows
 
     private val density = resources.displayMetrics.density
     private val scaled = density * resources.configuration.fontScale
@@ -72,7 +74,7 @@ class DrumsView(
             }
             label(canvas, row.label, edge, y, 12f, if (current) Color.WHITE else DIM)
             val value = row.value()
-            val shown = if (current && row.change != null) "‹  $value  ›" else value
+            val shown = if (current && row.change != null && row.arrows) "‹  $value  ›" else value
             label(canvas, shown, panelRight - dp(6f), y, 12f, if (current) Color.WHITE else DIM, Paint.Align.RIGHT)
             y += rowHeight
         }
@@ -116,6 +118,7 @@ class DrumsView(
             val y = startY + r * height
             label(canvas, NAMES[role] ?: role, left, y + height * 0.66f, 11f, DIM)
             val velocities = beat.tracks.getValue(role)
+            val loudness = rowLevel(role)
             for (s in 0 until steps) {
                 val x = left + nameRoom + s * cell
                 val v = velocities[s]
@@ -123,7 +126,7 @@ class DrumsView(
                 canvas.drawRoundRect(x + dp(1f), y + dp(1.5f), x + cell - dp(1f), y + height - dp(1.5f), dp(2f), dp(2f), fill)
                 if (v > 0) {
                     fill.color = if (s == now) ACCENT else Color.WHITE
-                    fill.alpha = (70 + 185 * v).toInt()
+                    fill.alpha = ((70 + 185 * v) * (MIN_ROW_BRIGHTNESS + (1 - MIN_ROW_BRIGHTNESS) * loudness)).toInt()
                     canvas.drawRoundRect(x + dp(1f), y + dp(1.5f), x + cell - dp(1f), y + height - dp(1.5f), dp(2f), dp(2f), fill)
                 }
             }
@@ -133,6 +136,7 @@ class DrumsView(
     companion object {
         private const val EDGE_DP = 21f
         private const val PANEL_SHARE = 0.34f
+        private const val MIN_ROW_BRIGHTNESS = 0.18f
         private val BACKGROUND = Color.rgb(12, 12, 14)
         private val DIM = Color.argb(170, 255, 255, 255)
         private val HIGHLIGHT = Color.argb(45, 255, 255, 255)
