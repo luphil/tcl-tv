@@ -8,7 +8,7 @@ Everything is controlled from a Mac over Wi-Fi with `adb`.
 
 | Path | What it is |
 |---|---|
-| `launcher/` | **TV Home**, the homescreen app (Kotlin, no third-party libraries). A row of app and HDMI-input tiles (sized to fit the screen; inputs can show a logo on brand colours), your photos as a slowly zooming slideshow, clock, date and weather with today's high/low (Open-Meteo, no account), quiet all-apps and settings icons, an ambient mode that hides the tiles when idle, skipping to the next photo by typing 6 6 6 quickly on the remote, a metronome opened by typing 5 5 5 within 1.5 seconds, a guitar chord and scale book opened with 7 7 7, and remote-button remapping. Weather and settings icons are from [Lucide](https://lucide.dev) (ISC); the Apple and PlayStation logos from [Simple Icons](https://simpleicons.org) (CC0). |
+| `launcher/` | **TV Home**, the homescreen app (Kotlin, no third-party libraries). A row of app and HDMI-input tiles (sized to fit the screen; inputs can show a logo on brand colours), your photos as a slowly zooming slideshow, clock, date and weather with today's high/low (Open-Meteo, no account), quiet all-apps and settings icons, an ambient mode that hides the tiles when idle, skipping to the next photo by typing 6 6 6 quickly on the remote, a metronome with sampled drums (88 beats and a beat generator) opened by typing 5 5 5 within 1.5 seconds, a guitar chord and scale book opened with 7 7 7, and remote-button remapping. Weather and settings icons are from [Lucide](https://lucide.dev) (ISC); the Apple and PlayStation logos from [Simple Icons](https://simpleicons.org) (CC0). |
 | `home/config.json` | Everything the homescreen shows: tile order, HDMI inputs, layout, font, wallpaper timing, weather location, remote buttons. |
 | `home/fonts/` | Space Grotesk ([SIL Open Font License](home/fonts/OFL.txt)). |
 | `aerial-views/notracking-openmeteo.patch` | Changes to [Aerial Views](https://github.com/theothernt/AerialViews) 1.8.5: weather via Open-Meteo instead of OpenWeather (no API key), plus a system-wallpaper rotator. Build its `fdroid` flavour to leave out Firebase. |
@@ -26,6 +26,10 @@ Everything is controlled from a Mac over Wi-Fi with `adb`.
 | `home-apply.sh` | Pushes `home/config.json`, fonts and the photos in `~/Desktop/TV wallpapers`. The homescreen reloads by itself. |
 | `screensaver-apply.sh` | Pushes photos and screensaver settings to Aerial Views. |
 | `mic-off.sh` | Turns the microphones off (Android's system-wide mic block, Google Assistant disabled). `./mic-off.sh undo` turns them back on. |
+| `tools/build-drumkits.py` | Builds the drum kits from free CC0 recordings ([Big Rusty Drums](https://github.com/sfzinstruments/karoryfer.big-rusty-drums), [Virtuosity Drums](https://github.com/sfzinstruments/virtuosity_drums), [Gogodze Phu Vol II](https://github.com/sfzinstruments/karoryfer.gogodze-phu-vol-ii)). Needs numpy; the samples aren't kept in this repo. |
+| `tools/build-electronic-kits.py` | Generates the 808, 909 and trap kits by modelling the drum machines' circuits. |
+| `drums-apply.sh` | Copies the built kits (about 1 GB) to the TV. |
+| `tools/check-drumbeats.py`, `tools/check-chordbook.py` | Check the drum patterns and the chord and scale data. |
 | `tvkey.sh` | Virtual remote, including real long-presses (`./tvkey.sh hold:enter`). |
 
 ## Doing this to your own TV

@@ -53,6 +53,11 @@
             android:exported="false" />
 
         <activity
+            android:name=".DrumsActivity"
+            android:excludeFromRecents="true"
+            android:exported="false" />
+
+        <activity
             android:name=".MetronomeActivity"
             android:excludeFromRecents="true"
             android:exported="false" />

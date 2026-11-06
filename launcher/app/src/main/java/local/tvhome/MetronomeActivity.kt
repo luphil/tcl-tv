@@ -1,11 +1,13 @@
 package local.tvhome
 
 import android.app.Activity
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.Choreographer
 import android.view.Gravity
 import android.view.KeyEvent
@@ -13,6 +15,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 
@@ -31,6 +34,8 @@ class MetronomeActivity : Activity() {
     private lateinit var tempoLabel: TextView
     private lateinit var barText: TextView
     private lateinit var soundText: TextView
+    private lateinit var drumsText: TextView
+    private lateinit var drumsIcon: ImageView
     private lateinit var stateText: TextView
     private lateinit var dots: LinearLayout
 
@@ -40,6 +45,7 @@ class MetronomeActivity : Activity() {
 
     // The row left/right change: ROW_TEMPO, ROW_BEATS or ROW_SOUND
     private var row = ROW_TEMPO
+    private var openedAt = 0L
     private val endPreview = Runnable { engine.stop() }
     private val typed = StringBuilder()
     private val applyTyped = Runnable { commitTyped() }
@@ -85,6 +91,17 @@ class MetronomeActivity : Activity() {
         column.addView(barText)
         soundText = tiles.text("", 14f, DIM_TEXT).apply { setPadding(0, tiles.dp(12), 0, 0) }
         column.addView(soundText)
+        val drums =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+                setPadding(0, tiles.dp(12), 0, 0)
+            }
+        drumsIcon = ImageView(this).apply { setImageResource(R.drawable.ic_drum) }
+        drums.addView(drumsIcon, LinearLayout.LayoutParams(tiles.dp(16), tiles.dp(16)).apply { marginEnd = tiles.dp(7) })
+        drumsText = tiles.text("", 14f, DIM_TEXT)
+        drums.addView(drumsText)
+        column.addView(drums)
         stateText = tiles.text("", 16f, Color.WHITE).apply { setPadding(0, tiles.dp(24), 0, 0) }
         column.addView(stateText)
 
@@ -113,13 +130,17 @@ class MetronomeActivity : Activity() {
         event: KeyEvent,
     ): Boolean {
         if (keyCode in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9) {
-            if (event.repeatCount == 0) typeDigit('0' + (keyCode - KeyEvent.KEYCODE_0))
+            // An extra press of the code that opened this page mustn't change the tempo
+            val settled = SystemClock.uptimeMillis() - openedAt > SETTLE_MS
+            if (event.repeatCount == 0 && settled) typeDigit('0' + (keyCode - KeyEvent.KEYCODE_0))
             return true
         }
         when (keyCode) {
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
                 commitTyped()
-                if (event.repeatCount == 0) toggle()
+                if (event.repeatCount == 0) {
+                    if (row == ROW_DRUMS) openDrums() else toggle()
+                }
             }
 
             KeyEvent.KEYCODE_DPAD_LEFT -> {
@@ -148,7 +169,7 @@ class MetronomeActivity : Activity() {
     }
 
     private fun selectRow(value: Int) {
-        row = value.coerceIn(ROW_TEMPO, ROW_SOUND)
+        row = value.coerceIn(ROW_TEMPO, ROW_DRUMS)
         showRows()
     }
 
@@ -161,8 +182,21 @@ class MetronomeActivity : Activity() {
             row == ROW_TEMPO -> setTempo(bpm + step)
             held -> return
             row == ROW_BEATS -> setBeats(beatsPerBar + step)
-            else -> setSound(step)
+            row == ROW_SOUND -> setSound(step)
         }
+    }
+
+    private fun openDrums() {
+        stop()
+        prefs.edit().putInt(KEY_BPM, bpm).apply()
+        startActivity(Intent(this, DrumsActivity::class.java))
+    }
+
+    // The drums page may have changed the tempo
+    override fun onResume() {
+        super.onResume()
+        openedAt = SystemClock.uptimeMillis()
+        setTempo(prefs.getInt(KEY_BPM, bpm))
     }
 
     private fun toggle() {
@@ -253,6 +287,10 @@ class MetronomeActivity : Activity() {
         show(tempoLabel, "BPM", ROW_TEMPO)
         show(barText, if (beatsPerBar == 1) "1 beat per bar" else "$beatsPerBar beats per bar", ROW_BEATS)
         show(soundText, sound.label, ROW_SOUND)
+        drumsText.text = "Drums"
+        drumsText.setTextColor(if (row == ROW_DRUMS) Color.WHITE else DIM_TEXT)
+        drumsIcon.alpha = if (row == ROW_DRUMS) 1f else 0.6f
+        showState()
     }
 
     private fun show(
@@ -283,7 +321,12 @@ class MetronomeActivity : Activity() {
     }
 
     private fun showState() {
-        stateText.text = if (playing()) "Playing" else "Press OK to start"
+        stateText.text =
+            when {
+                row == ROW_DRUMS -> "Press OK for drum beats"
+                playing() -> "Playing"
+                else -> "Press OK to start"
+            }
     }
 
     private fun flash(index: Int) {
@@ -303,13 +346,15 @@ class MetronomeActivity : Activity() {
     }
 
     companion object {
-        private const val KEY_BPM = "bpm"
+        const val KEY_BPM = "bpm"
         private const val KEY_BEATS = "beats"
         private const val KEY_SOUND = "sound"
         private const val ROW_TEMPO = 0
         private const val ROW_BEATS = 1
         private const val ROW_SOUND = 2
+        private const val ROW_DRUMS = 3
         private const val PREVIEW_MS = 450L
+        private const val SETTLE_MS = 800L
         private const val MIN_BPM = 30
         private const val MAX_BPM = 300
         private const val MAX_BEATS = 12
