@@ -1,0 +1,40 @@
+[
+  { "group": "Space", "name": "International Space Station", "place": "Low Earth orbit, NASA", "zone": "UTC", "channel": "@NASA", "search": "Live Views International Space Station NASA", "match": "International Space Station", "id": "ROboUHfPUrU" },
+  { "group": "Space", "name": "Earth in 4K", "place": "From orbit, Sen", "zone": "UTC", "channel": "@Sen", "search": "Live 4K video of Earth and space Sen", "match": "Earth", "id": "fO9e9jnhYK8" },
+  { "group": "Space", "name": "Starbase", "place": "Boca Chica, Texas", "zone": "America/Chicago", "channel": "@NASASpaceflight", "search": "Starbase Live NASASpaceflight", "match": "Starbase", "id": "mhJRzQsLZGg" },
+
+  { "group": "Wildlife", "name": "Brooks Falls Brown Bears", "place": "Katmai, Alaska", "zone": "America/Anchorage", "channel": "@ExploreLiveNatureCams", "search": "Brooks Falls Katmai live", "match": "Brooks Falls", "id": "J7ZrIDvqlic" },
+  { "group": "Wildlife", "name": "Mpala Watering Hole", "place": "Laikipia, Kenya", "zone": "Africa/Nairobi", "channel": "@ExploreAfricanWildlife", "search": "Watering Hole in Kenya MPALA", "match": "Watering Hole", "id": "oORXfTviuCs" },
+  { "group": "Wildlife", "name": "Mpala Hippo River", "place": "Laikipia, Kenya", "zone": "Africa/Nairobi", "channel": "@ExploreAfricanWildlife", "search": "African River Wildlife Kenya Hippo Crocodile MPALA", "match": "River", "id": "7x5kRo1B84Y" },
+  { "group": "Wildlife", "name": "Namib Desert Waterhole", "place": "Namib Desert, Namibia", "zone": "Africa/Windhoek", "channel": "@NamibiaCam", "search": "Namibia live stream in the Namib Desert", "match": "Namib Desert", "id": "ydYDqZQpim8" },
+  { "group": "Wildlife", "name": "ol Donyo Lodge", "place": "Chyulu Hills, Kenya", "zone": "Africa/Nairobi", "channel": "@Africamvideos", "search": "ol Donyo Lodge Wildlife Live Stream Kenya", "match": "ol Donyo", "id": "XsOU8JnEpNM" },
+  { "group": "Wildlife", "name": "Giant Pandas", "place": "Chengdu, China", "zone": "Asia/Shanghai", "channel": "@iPandaChannel", "search": "Panda 24/7 HD Live Chengdu Panda Base", "match": "Panda", "id": "SUXPnIEpbn4" },
+  { "group": "Wildlife", "name": "Panama Hummingbirds", "place": "Canopy Lodge, Panama", "zone": "America/Panama", "channel": "@CornellBirdCams", "search": "Panama Hummingbird Feeder Cornell Lab", "match": "Hummingbird", "id": "0xFARCdZ3vA" },
+  { "group": "Wildlife", "name": "Cornell FeederWatch", "place": "Ithaca, New York", "zone": "America/New_York", "channel": "@CornellBirdCams", "search": "Cornell Lab FeederWatch Cam Sapsucker Woods", "match": "FeederWatch", "id": "x10vL6_47Dw" },
+
+  { "group": "Ocean", "name": "Kelp Forest", "place": "Monterey Bay Aquarium, California", "zone": "America/Los_Angeles", "channel": "@MontereyBayAquarium", "search": "Live Kelp Forest Cam Monterey Bay Aquarium", "match": "Kelp Forest", "id": "w3LjpFhySTg" },
+  { "group": "Ocean", "name": "Open Sea", "place": "Monterey Bay Aquarium, California", "zone": "America/Los_Angeles", "channel": "@MontereyBayAquarium", "search": "Live Open Sea Cam Monterey Bay Aquarium", "match": "Open Sea", "id": "n_GpVsz4nHU" },
+  { "group": "Ocean", "name": "Jellies", "place": "Monterey Bay Aquarium, California", "zone": "America/Los_Angeles", "channel": "@MontereyBayAquarium", "search": "Live Jelly Cam Monterey Bay Aquarium", "match": "Jelly", "id": "eQ_foBERmzA" },
+  { "group": "Ocean", "name": "Sharks", "place": "Monterey Bay Aquarium, California", "zone": "America/Los_Angeles", "channel": "@MontereyBayAquarium", "search": "Live Shark Cam Monterey Bay Aquarium", "match": "Shark", "id": "tEtg5Kg3voQ" },
+  { "group": "Ocean", "name": "Sea Otters", "place": "Monterey Bay Aquarium, California", "zone": "America/Los_Angeles", "channel": "@MontereyBayAquarium", "search": "Live Sea Otter Cam Monterey Bay Aquarium", "match": "Sea Otter", "id": "abbR-Ttd-cA" },
+  { "group": "Ocean", "name": "Tropical Reef", "place": "Aquarium of the Pacific, California", "zone": "America/Los_Angeles", "channel": "@ExploreLiveNatureCams", "search": "Tropical Reef Camera EXPLORE.org", "match": "Tropical Reef", "id": "DHUnz4dyb54" },
+  { "group": "Ocean", "name": "Coral City", "place": "Port of Miami, Florida", "zone": "America/New_York", "channel": "@CoralMorphologic", "search": "Coral City Camera Miami underwater", "match": "Coral City", "id": "7i8ARjIeM2k" },
+  { "group": "Ocean", "name": "Abyss: Cascadia Basin", "place": "2,660 m down, Ocean Networks Canada", "zone": "America/Vancouver", "stream": "https://media.oceannetworks.ca:4935/rtplive/Z3CAM50016501240910002/playlist.m3u8", "everyHours": 1, "minutes": 5 },
+  { "group": "Ocean", "name": "Barkley Canyon", "place": "Deep sea, Ocean Networks Canada", "zone": "America/Vancouver", "stream": "https://media.oceannetworks.ca:4935/rtplive/AXISCAMB8A44F720E0D/playlist.m3u8", "everyHours": 1, "minutes": 5 },
+  { "group": "Ocean", "name": "Hydrothermal Vents", "place": "Endeavour, Ocean Networks Canada", "zone": "America/Vancouver", "stream": "https://media.oceannetworks.ca:4935/rtplive/DRAGONFISHSUBC13113/playlist.m3u8", "everyHours": 4, "minutes": 4 },
+
+  { "group": "Planet", "name": "Kīlauea Volcano", "place": "Hawaiʻi, USGS", "zone": "Pacific/Honolulu", "channel": "@usgs", "search": "V1cam Kilauea volcano Hawaii USGS", "match": "Kīlauea", "id": "HggWKlZv9yk" },
+  { "group": "Planet", "name": "Iceland Volcano Watch", "place": "Reykjanes, Iceland", "zone": "Atlantic/Reykjavik", "channel": "@afartv", "search": "Iceland Volcano Watch afarTV", "match": "Iceland", "id": "qkSvU9j4kqM" },
+  { "group": "Planet", "name": "Northern Lights", "place": "Sodankylä, Finland", "zone": "Europe/Helsinki", "channel": "@Starlapland", "search": "Northern Light Live Sodankyla Finland", "match": "Sodankyl", "id": "dnlQtDad6Dk" },
+  { "group": "Planet", "name": "Mount Fuji", "place": "Lake Kawaguchi, Japan", "zone": "Asia/Tokyo", "search": "mount fuji live camera Lake Kawaguchi", "match": "mount fuji", "id": "bdUbACCWmoY" },
+  { "group": "Planet", "name": "Banzai Pipeline", "place": "North Shore, Oʻahu", "zone": "Pacific/Honolulu", "channel": "@ExploreBigSurfandBeaches", "search": "Banzai Pipeline Surf Cam North Shore", "match": "Pipeline", "id": "Fp7l8XASb9Y" },
+
+  { "group": "Cities", "name": "Shibuya Crossing", "place": "Tokyo, Japan", "zone": "Asia/Tokyo", "channel": "@ANNnewsCH", "search": "Shibuya Scramble Crossing Live Camera", "match": "Shibuya", "id": "5B4LmH4JbnY" },
+  { "group": "Cities", "name": "Times Square", "place": "New York City", "zone": "America/New_York", "channel": "@earthcam", "search": "EarthCam Live Times Square Crossroads", "match": "Times Square", "id": "KHy_n-EMWY8" },
+  { "group": "Cities", "name": "Abbey Road", "place": "London, England", "zone": "Europe/London", "channel": "@earthcam", "search": "EarthCam Live Abbey Road Crossing", "match": "Abbey Road", "id": "zMCea32gpmg" },
+  { "group": "Cities", "name": "Grand Canal", "place": "Venice, Italy", "zone": "Europe/Rome", "channel": "@iloveyouvenice", "search": "4K Live Webcam Grand Canal Venice", "match": "Grand Canal", "id": "r8N6IsoIkTk" },
+  { "group": "Cities", "name": "Jackson Town Square", "place": "Jackson Hole, Wyoming", "zone": "America/Denver", "channel": "@Seejh", "search": "Jackson Hole Town Square Live Webcam", "match": "Town Square", "id": "1EiC9bvVGnk" },
+
+  { "group": "On the Move", "name": "LAX Runways", "place": "Los Angeles, California", "zone": "America/Los_Angeles", "channel": "@AirlineVideosLivePlus", "search": "LIVE 24/7 LAX Airport Action Runways", "match": "LAX", "id": "n4I0d44oBEs" },
+  { "group": "On the Move", "name": "Rocky Mountain Railway", "place": "Revelstoke, British Columbia", "zone": "America/Vancouver", "channel": "@VirtualRailfan", "search": "Revelstoke British Columbia LIVE Train Camera", "match": "Revelstoke", "id": "fIMbMz2P7Bs" }
+]

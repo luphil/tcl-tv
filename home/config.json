@@ -11,6 +11,7 @@
   "metronome": { "code": "555" },
   "chordBook": { "code": "777" },
   "wifi": { "code": "999" },
+  "live": { "code": "111" },
   "remoteButtons": {
     "83": "settings",
     "4065": "com.google.android.youtube.tv",

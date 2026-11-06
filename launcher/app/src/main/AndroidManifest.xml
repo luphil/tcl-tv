@@ -53,6 +53,13 @@
             android:exported="false" />
 
         <activity
+            android:name=".LiveHubActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|uiMode"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:hardwareAccelerated="true" />
+
+        <activity
             android:name=".WifiActivity"
             android:excludeFromRecents="true"
             android:exported="false" />

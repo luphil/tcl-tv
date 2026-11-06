@@ -138,6 +138,18 @@ class Tiles(
         return sample.getPixel(1, 1).also { sample.recycle() }
     }
 
+    /** A tile with nothing on it but a symbol, on its own colours: TV Home's built-in apps. */
+    fun symbolTile(
+        symbol: Int,
+        colors: List<Int>,
+    ): FrameLayout {
+        val tile = baseTile()
+        tile.background =
+            GradientDrawable(GradientDrawable.Orientation.TL_BR, colors.toIntArray()).apply { cornerRadius = dp(10).toFloat() }
+        tile.addView(ImageView(context).apply { setImageResource(symbol) }, FrameLayout.LayoutParams(dp(38), dp(38), Gravity.CENTER))
+        return tile
+    }
+
     /** An input tile's logo and its size scale, to resize it with the tile. */
     fun logoIn(tile: FrameLayout): Pair<ImageView, Float>? {
         val column = tile.getChildAt(0) as? LinearLayout ?: return null

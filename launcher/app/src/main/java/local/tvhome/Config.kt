@@ -20,6 +20,8 @@ data class Config(
     val chordBookCode: String = "777",
     // The same for the Wi-Fi QR code
     val wifiCode: String = "999",
+    // The same for the live feeds
+    val liveCode: String = "111",
     val clock: Boolean = true,
     val clockFormat: String = "HH:mm",
     // Shown under the clock; blank hides it
@@ -176,6 +178,7 @@ data class Config(
                 metronomeCode = (json.optJSONObject("metronome") ?: JSONObject()).optString("code", defaults.metronomeCode).filter { it.isDigit() },
                 chordBookCode = (json.optJSONObject("chordBook") ?: JSONObject()).optString("code", defaults.chordBookCode).filter { it.isDigit() },
                 wifiCode = (json.optJSONObject("wifi") ?: JSONObject()).optString("code", defaults.wifiCode).filter { it.isDigit() },
+                liveCode = (json.optJSONObject("live") ?: JSONObject()).optString("code", defaults.liveCode).filter { it.isDigit() },
                 clock = clock.optBoolean("enabled", defaults.clock),
                 clockFormat = clock.optString("format", defaults.clockFormat),
                 dateFormat = clock.optString("dateFormat", defaults.dateFormat),
