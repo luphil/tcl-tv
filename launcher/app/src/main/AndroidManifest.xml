@@ -47,6 +47,16 @@
             android:name=".AllAppsActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ChordBookActivity"
+            android:excludeFromRecents="true"
+            android:exported="false" />
+
+        <activity
+            android:name=".MetronomeActivity"
+            android:excludeFromRecents="true"
+            android:exported="false" />
+
         <!-- Makes the remote's gear button open settings everywhere -->
         <service
             android:name=".SettingsKeyService"

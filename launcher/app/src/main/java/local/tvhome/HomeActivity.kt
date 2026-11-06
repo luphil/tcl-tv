@@ -45,8 +45,9 @@ class HomeActivity : Activity() {
     private var ambient = false
     private var swallowKeyUp = -1
 
-    // Digits typed so far towards the skip-photo code, and when the last one came
+    // Digits typed so far towards a remote code, and when each one came
     private val typed = StringBuilder()
+    private val typedAt = mutableListOf<Long>()
     private var lastDigitAt = 0L
     private val cornerButtons = mutableListOf<View>()
     private val cells = mutableListOf<FrameLayout>()
@@ -501,9 +502,9 @@ class HomeActivity : Activity() {
     // and only the photo, clock and weather stay. Any button brings them back
     // (that press only wakes the screen; it doesn't also act on the focused tile).
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        // Number buttons only ever type the skip-photo code: they neither wake the tiles
-        // nor restart the idle timer, so photos can be skipped while the tiles are hidden
-        if (event.keyCode in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 && config.wallpaperNextCode.isNotEmpty()) {
+        // Number buttons only ever type remote codes: they neither wake the tiles nor
+        // restart the idle timer, so photos can be skipped while the tiles are hidden
+        if (event.keyCode in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 && (config.wallpaperNextCode + config.metronomeCode + config.chordBookCode).isNotEmpty()) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) typeDigit('0' + (event.keyCode - KeyEvent.KEYCODE_0))
             return true
         }
@@ -524,13 +525,31 @@ class HomeActivity : Activity() {
 
     private fun typeDigit(digit: Char) {
         val now = SystemClock.uptimeMillis()
-        if (now - lastDigitAt > CODE_GAP_MS) typed.clear()
+        if (now - lastDigitAt > CODE_GAP_MS) clearTyped()
         lastDigitAt = now
         typed.append(digit)
-        if (typed.endsWith(config.wallpaperNextCode)) {
-            typed.clear()
-            wallpaper.next()
+        typedAt += now
+        when {
+            typedCode(config.wallpaperNextCode) -> wallpaper.next()
+            typedCode(config.metronomeCode, APP_CODE_WINDOW_MS) -> launch(Intent(this, MetronomeActivity::class.java))
+            typedCode(config.chordBookCode, APP_CODE_WINDOW_MS) -> launch(Intent(this, ChordBookActivity::class.java))
         }
+    }
+
+    // Whether the digits just typed are this code, all within the window if it has one
+    private fun typedCode(
+        code: String,
+        windowMs: Long = Long.MAX_VALUE,
+    ): Boolean {
+        if (code.isEmpty() || !typed.endsWith(code)) return false
+        if (lastDigitAt - typedAt[typedAt.size - code.length] > windowMs) return false
+        clearTyped()
+        return true
+    }
+
+    private fun clearTyped() {
+        typed.clear()
+        typedAt.clear()
     }
 
     private fun restartIdleTimer() {
@@ -672,7 +691,10 @@ class HomeActivity : Activity() {
         private const val AMBIENT_FADE_OUT_MS = 1200L
         private const val AMBIENT_FADE_IN_MS = 250L
 
-        // Longest pause between the skip-photo code's digits
+        // Longest pause between a remote code's digits
         private const val CODE_GAP_MS = 1500L
+
+        // A code that opens an app must be typed whole within this
+        private const val APP_CODE_WINDOW_MS = 1500L
     }
 }

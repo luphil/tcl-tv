@@ -8,6 +8,8 @@
   },
   "layout": { "row": "bottom", "clock": "bottom-right", "buttons": "top-right" },
   "ambient": { "enabled": true, "seconds": 120 },
+  "metronome": { "code": "555" },
+  "chordBook": { "code": "777" },
   "remoteButtons": {
     "83": "settings",
     "4065": "com.google.android.youtube.tv",

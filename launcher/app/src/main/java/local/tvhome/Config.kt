@@ -14,6 +14,10 @@ data class Config(
     val wallpaperZoom: Boolean = true,
     // Number buttons typed quickly on the homescreen to skip to the next photo; blank = off
     val wallpaperNextCode: String = "666",
+    // Number buttons typed on the homescreen, all within 1.5 seconds, to open the metronome; blank = off
+    val metronomeCode: String = "555",
+    // The same for the chord book
+    val chordBookCode: String = "777",
     val clock: Boolean = true,
     val clockFormat: String = "HH:mm",
     // Shown under the clock; blank hides it
@@ -167,6 +171,8 @@ data class Config(
                 wallpaperShuffle = wallpaper.optBoolean("shuffle", defaults.wallpaperShuffle),
                 wallpaperZoom = wallpaper.optBoolean("zoom", defaults.wallpaperZoom),
                 wallpaperNextCode = wallpaper.optString("nextCode", defaults.wallpaperNextCode).filter { it.isDigit() },
+                metronomeCode = (json.optJSONObject("metronome") ?: JSONObject()).optString("code", defaults.metronomeCode).filter { it.isDigit() },
+                chordBookCode = (json.optJSONObject("chordBook") ?: JSONObject()).optString("code", defaults.chordBookCode).filter { it.isDigit() },
                 clock = clock.optBoolean("enabled", defaults.clock),
                 clockFormat = clock.optString("format", defaults.clockFormat),
                 dateFormat = clock.optString("dateFormat", defaults.dateFormat),
