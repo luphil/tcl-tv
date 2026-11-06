@@ -16,6 +16,8 @@ adb push "$PHOTOS/." /sdcard/Pictures/Wallpapers/ | tail -1
 adb shell mkdir -p /sdcard/TVHome/fonts
 [ -d home/fonts ] && adb push home/fonts/. /sdcard/TVHome/fonts/ >/dev/null
 adb push home/config.json /sdcard/TVHome/config.json | tail -1
+# Wi-Fi details for the QR code, if they've been filled in (private, not in git)
+grep -qE '"password": *"[^"]+"' home/wifi.json 2>/dev/null && adb push home/wifi.json /sdcard/TVHome/wifi.json >/dev/null
 # adb push keeps the Mac's timestamp; stamp it now so the homescreen always reloads
 adb shell touch /sdcard/TVHome/config.json
 adb shell input keyevent KEYCODE_HOME

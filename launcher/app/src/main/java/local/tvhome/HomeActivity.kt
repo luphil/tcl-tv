@@ -504,7 +504,7 @@ class HomeActivity : Activity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         // Number buttons only ever type remote codes: they neither wake the tiles nor
         // restart the idle timer, so photos can be skipped while the tiles are hidden
-        if (event.keyCode in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 && (config.wallpaperNextCode + config.metronomeCode + config.chordBookCode).isNotEmpty()) {
+        if (event.keyCode in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 && (config.wallpaperNextCode + config.metronomeCode + config.chordBookCode + config.wifiCode).isNotEmpty()) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) typeDigit('0' + (event.keyCode - KeyEvent.KEYCODE_0))
             return true
         }
@@ -533,6 +533,7 @@ class HomeActivity : Activity() {
             typedCode(config.wallpaperNextCode) -> wallpaper.next()
             typedCode(config.metronomeCode, APP_CODE_WINDOW_MS) -> launch(Intent(this, MetronomeActivity::class.java))
             typedCode(config.chordBookCode, APP_CODE_WINDOW_MS) -> launch(Intent(this, ChordBookActivity::class.java))
+            typedCode(config.wifiCode, APP_CODE_WINDOW_MS) -> launch(Intent(this, WifiActivity::class.java))
         }
     }
 

@@ -16,3 +16,6 @@ launcher/build/
 launcher/app/build/
 launcher/local.properties
 .DS_Store
+
+# Private: the Wi-Fi password, for the QR code on the TV
+home/wifi.json
